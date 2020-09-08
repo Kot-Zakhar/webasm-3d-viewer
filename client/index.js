@@ -37,8 +37,51 @@ const height = 512;
     });
 
     console.log(vertexes);
-    image.move_object();
-    console.log(vertexes);
+    image.translate_to_camera();
+
+    image.map_view_on_image();
+
+    const viewVertexesPtr = image.view_vertexes();
+    const viewVertexes = new Float64Array(memory.buffer, viewVertexesPtr, rawVertexes.length * 4);
+    console.log(viewVertexes);
+
+    // let range = {
+    //     xmin: 0,
+    //     xmax: 0,
+    //     ymin: 0,
+    //     ymax: 0,
+    //     zmin: 0,
+    //     zmax: 0,                
+    // }
+    // for (let i = 0; i < viewVertexes.length; i+=4) {
+    //     if (viewVertexes[i] < range.xmin)
+    //         range.xmin = viewVertexes[i];
+    //     if (viewVertexes[i] > range.xmax)
+    //         range.xmax = viewVertexes[i];
+
+    //     if (viewVertexes[i+1] < range.ymin)
+    //         range.ymin = viewVertexes[i+1];
+    //     if (viewVertexes[i+1] > range.ymax)
+    //         range.ymax = viewVertexes[i+1];
+
+    //     if (viewVertexes[i+2] < range.zmin)
+    //         range.zmin = viewVertexes[i+2];
+    //     if (viewVertexes[i+2] > range.zmax)
+    //         range.zmax = viewVertexes[i+2];
+    // }
+    // console.log(range);
+
+    const canvas = document.getElementById("game-of-life-canvas");
+    canvas.height = height;
+    canvas.width = width;
+
+    const ctx = canvas.getContext('2d');
+    const palette = new ImageData(pixels, width, height);
+    ctx.putImageData(palette, 0, 0);
+
+    console.log(pixels);
+
+    console.log(pixels.filter(p => p != 255).length);
 })()
 
 

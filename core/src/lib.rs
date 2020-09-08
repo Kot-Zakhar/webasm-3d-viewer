@@ -1,7 +1,7 @@
 mod utils;
 
 extern crate nalgebra as na;
-use na::{Vector4, Matrix4};
+use na::*;
 use wasm_bindgen::prelude::*;
 use rand::Rng;
 
@@ -20,7 +20,8 @@ pub struct Image {
     width: u32,
     height: u32,
     pixels: Vec<Pixel>,
-    vertexes: Vec<Vertex>
+    vertexes: Vec<Vertex>,
+    view_vertexes: Vec<Vertex>
 }
 
 impl Image {
@@ -59,12 +60,20 @@ impl Image {
                 // x, y, z, v
             })
             .collect();
-
+        
+        let view_vertexes = (0..vertexes_amount)
+        .map(|_| {
+            Vertex::new(0.0, 0.0, 0.0, 0.0)
+            // x, y, z, v
+        })
+        .collect();
+        
         Image {
             width,
             height,
             pixels,
-            vertexes
+            vertexes,
+            view_vertexes
         }
     }
 
@@ -84,16 +93,63 @@ impl Image {
         self.vertexes.as_ptr()
     }
 
-    pub fn move_object(&mut self) {
-        let translation_matrix = TransformationMatrix::new(
-            1.0, 0.0, 0.0, 1.0,
-            0.0, 1.0, 0.0, 1.0,
-            0.0, 0.0, 1.0, 1.0,
+    pub fn view_vertexes(&self) -> *const Vertex {
+        self.view_vertexes.as_ptr()
+    }
+
+
+    pub fn translate_to_camera(&mut self) {
+        utils::set_panic_hook();
+
+        let camera_position = RowVector3::new(0.0, 0.0, 1.0);
+
+        let camera_target = RowVector3::new(0.0, 0.0, 0.0);
+
+        let camera_direction = camera_position - camera_target;
+
+        let up = RowVector3::new(0.0, 1.0, 0.0);
+
+        let camera_right = up.cross(&camera_direction);
+        let camera_right = camera_right.normalize();
+
+        let camera_up = camera_direction.cross(&camera_right);
+
+        let camera_rud_matrix = Matrix4::from_rows(&[
+            camera_right    .insert_column(3, 0.0),
+            camera_up       .insert_column(3, 0.0),
+            camera_direction.insert_column(3, 0.0),
+            RowVector4::new(0.0, 0.0, 0.0, 1.0)
+        ]);
+
+        let camera_position_matrix = Matrix4::new(
+            1.0, 0.0, 0.0, -camera_position.data[0],
+            0.0, 1.0, 0.0, -camera_position.data[1],
+            0.0, 0.0, 1.0, -camera_position.data[2],
             0.0, 0.0, 0.0, 1.0
         );
 
-        for vertex in self.vertexes.iter_mut() {
-            *vertex = translation_matrix * *vertex;
+        let look_at_matrix = camera_rud_matrix * camera_position_matrix;
+
+
+        for (i, vertex) in self.vertexes.iter().enumerate() {
+            self.view_vertexes[i] = look_at_matrix * *vertex;
         }
     }
+
+    pub fn map_view_on_image(&mut self) {
+        for vertex in self.view_vertexes.iter() {
+            let x = (vertex.data[0] * self.width as f64 / 2.0 + self.width as f64 / 2.0).round() as u32;
+            let y = (-vertex.data[1] * self.height as f64 / 2.0 + self.height as f64 / 2.0).round() as u32;
+
+            let index = y * self.width + x;
+            if index >= self.width * self.height {
+                continue;
+            }
+            let index = index as usize;
+            self.pixels[index].r = 0;
+            self.pixels[index].g = 0;
+            self.pixels[index].b = 0;
+        }
+    }
+
 }

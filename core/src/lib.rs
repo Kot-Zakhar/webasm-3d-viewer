@@ -2,8 +2,8 @@ mod utils;
 
 extern crate nalgebra as na;
 use na::*;
+use std::mem;
 use wasm_bindgen::prelude::*;
-use rand::Rng;
 
 pub struct Pixel {
     r: u8,
@@ -22,12 +22,54 @@ pub struct Image {
     pixels: Vec<Pixel>,
     vertexes: Vec<Vertex>,
     view_vertexes: Vec<Vertex>,
+    faces: Vec<Matrix3<u32>>,
     rotation_matrix: Matrix4<f64>
 }
 
 impl Image {
-    fn get_index(&self, row: u32, column: u32) -> usize {
-        (row * self.width + column) as usize
+    fn get_index(row: u32, column: u32, width: u32) -> usize {
+        (row * width + column) as usize
+    }
+
+    fn draw_line(pixels: &mut Vec<Pixel>, width: u32, height: u32, mut x0: i32, mut y0: i32, mut x1:i32, mut y1: i32) {
+        
+        let steep = i32::abs(x0-x1) < i32::abs(y0-y1);
+        if steep {
+            mem::swap(&mut x0, &mut y0);
+            mem::swap(&mut x1, &mut y1);
+        }
+
+        if x0>x1 {
+            mem::swap(&mut x0, &mut x1);
+            mem::swap(&mut y0, &mut y1);
+        }
+
+        let dx = x1 - x0;
+        let dy = y1 - y0;
+        let derror2 = i32::abs(dy) * 2;
+        let mut error2 = 0;
+
+        let mut y = y0;
+        let mut x = x0;
+        while x <= x1 {
+            let index;
+            if steep {
+                index = Image::get_index(x as u32, y as u32, width);
+            } else {
+                index = Image::get_index(y as u32, x as u32, width);
+            }
+            pixels[index].r = 0;
+            pixels[index].g = 0;
+            pixels[index].b = 0;
+            
+            error2 += derror2;
+
+            if error2 > dx {
+                y += if y1 > y0 { 1 } else { -1 };
+                error2 -= dx * 2;
+            }
+            x += 1;
+        }
     }
 }
 
@@ -68,12 +110,13 @@ impl Image {
         );
 
         Image {
-            width,
-            height,
-            pixels,
-            vertexes,
-            view_vertexes,
-            rotation_matrix
+            width: width,
+            height: height,
+            pixels: pixels,
+            vertexes: vertexes,
+            view_vertexes: view_vertexes,
+            faces: Vec::new(),
+            rotation_matrix: rotation_matrix
         }
     }
 
@@ -93,15 +136,24 @@ impl Image {
         self.view_vertexes.as_ptr()
     }
 
-    pub fn tick(&mut self) {
-        let mut rng = rand::thread_rng();
-        let row = rng.gen_range(0, self.height);
-        let col = rng.gen_range(0, self.width);
+    pub fn add_face(&mut self, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) {
+        self.faces.push(Matrix3::new(
+            v0, v1, v2,
+            vt0, vt1, vt2,
+            vn0, vn1, vn2
+        ));
+    }
 
-        let idx = self.get_index(row, col);
-        self.pixels[idx].r = self.pixels[idx].r ^ 255;
-        self.pixels[idx].g = self.pixels[idx].g ^ 255;
-        self.pixels[idx].b = self.pixels[idx].b ^ 255;
+    pub fn upscale(&mut self) {
+        let scale_matrix = Matrix4::new(
+            100.0, 0.0, 0.0, 0.0,
+            0.0, 100.0, 0.0, 0.0,
+            0.0, 0.0, 100.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        );
+        for vertex in self.vertexes.iter_mut() {
+            *vertex = scale_matrix * *vertex;
+        }
     }
 
     pub fn rotate(&mut self) {
@@ -113,7 +165,7 @@ impl Image {
     pub fn translate_to_camera(&mut self) {
         utils::set_panic_hook();
 
-        let camera_position = RowVector3::new(0.0, 0.0, 1.0);
+        let camera_position = RowVector3::new(0.3, 0.3, 1.0);
 
         let camera_target = RowVector3::new(0.0, 0.0, 0.0);
 
@@ -148,24 +200,61 @@ impl Image {
         }
     }
 
-    pub fn map_view_on_image(&mut self) {
+    pub fn clear_image(&mut self) {
         for pixel in self.pixels.iter_mut() {
             pixel.r = 255;
             pixel.g = 255;
             pixel.b = 255;
         }
-        for vertex in self.view_vertexes.iter() {
-            let x = (vertex.data[0] * self.width as f64 / 2.0 + self.width as f64 / 2.0).round() as u32;
-            let y = (-vertex.data[1] * self.height as f64 / 2.0 + self.height as f64 / 2.0).round() as u32;
+    }
 
-            let index = (y * self.width + x) as usize;
-            if index >= self.pixels.len() {
+    pub fn draw_dots_on_image(&mut self) {
+        for vertex in self.view_vertexes.iter() {
+            // let x = (vertex[0] * self.width as f64 / 2.0 + self.width as f64 / 2.0).round() as i32;
+            // let y = (-vertex[1] * self.height as f64 / 2.0 + self.height as f64 / 2.0).round() as i32;
+            let x = (vertex[0] + self.width as f64 / 2.0).round() as i32;
+            let y = (-vertex[1] + self.height as f64 / 2.0).round() as i32;
+            // let x = (vertex[0]).round() as i32;
+            // let y = (-vertex[1]).round() as i32;
+
+            if x > self.width as i32 || y >= self.height as i32 || x < 0 || y < 0 {
                 continue;
             }
+
+            let index = Image::get_index(y as u32, x as u32, self.width);
+            
             self.pixels[index].r = 0;
             self.pixels[index].g = 0;
             self.pixels[index].b = 0;
         }
     }
 
+    pub fn draw_lines_on_image(&mut self) {
+        for face in self.faces.iter() {
+            for n in 0..3 {
+                let v0 = self.view_vertexes[face[(0, n)] as usize];
+                let v1 = self.view_vertexes[face[(0, (n + 1) % 3)] as usize];
+
+                // let x0 = (v0[0] * self.width as f64 / 2.0 + self.width as f64 / 2.0).round() as i32;
+                // let y0 = (-v0[1] * self.height as f64 / 2.0 + self.height as f64 / 2.0).round() as i32;
+                // let x1 = (v1[0] * self.width as f64 / 2.0 + self.width as f64 / 2.0).round() as i32;
+                // let y1 = (-v1[1] * self.height as f64 / 2.0 + self.height as f64 / 2.0).round() as i32;
+                let x0 = (v0[0] + self.width as f64 / 2.0).round() as i32;
+                let y0 = (-v0[1] + self.height as f64 / 2.0).round() as i32;
+                let x1 = (v1[0] + self.width as f64 / 2.0).round() as i32;
+                let y1 = (-v1[1] + self.height as f64 / 2.0).round() as i32;
+                // let x0 = (v0[0]).round() as i32;
+                // let y0 = (-v0[1]).round() as i32;
+                // let x1 = (v1[0]).round() as i32;
+                // let y1 = (-v1[1]).round() as i32;
+
+                if x0 > self.width as i32 || y0 >= self.height as i32 || x0 < 0 || y0 < 0 ||
+                x1 > self.width as i32 || y1 >= self.height as i32 || x1 < 0 || y1 < 0 {
+                    continue;
+                }
+
+                Image::draw_line(&mut self.pixels, self.width, self.height, x0, y0, x1, y1);
+            }
+        }
+    }
 }

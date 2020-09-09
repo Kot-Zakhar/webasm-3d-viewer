@@ -17,6 +17,8 @@ rawApi.get('/v', (req, res) => {
 })
 
 rawApi.get('/f', (req, res) => {
+    // TODO: faces must always have only 3 vertexes - split if more
+    // TODO: indexes must be >= 0 - fix, if negative
     const rawLines = fs.readFileSync('public/Model.obj').toString()
         .split('\n')
         .map(line => line.split(' '));

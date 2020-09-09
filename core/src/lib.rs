@@ -21,7 +21,8 @@ pub struct Image {
     height: u32,
     pixels: Vec<Pixel>,
     vertexes: Vec<Vertex>,
-    view_vertexes: Vec<Vertex>
+    view_vertexes: Vec<Vertex>,
+    rotation_matrix: Matrix4<f64>
 }
 
 impl Image {
@@ -32,17 +33,6 @@ impl Image {
 
 #[wasm_bindgen]
 impl Image {
-    pub fn tick(&mut self) {
-        let mut rng = rand::thread_rng();
-        let row = rng.gen_range(0, self.height);
-        let col = rng.gen_range(0, self.width);
-
-        let idx = self.get_index(row, col);
-        self.pixels[idx].r = self.pixels[idx].r ^ 255;
-        self.pixels[idx].g = self.pixels[idx].g ^ 255;
-        self.pixels[idx].b = self.pixels[idx].b ^ 255;
-    }
-
     pub fn new(width: u32, height: u32, vertexes_amount: u32) -> Image {
         let pixels = (0..width * height)
             .map(|_| {
@@ -68,35 +58,57 @@ impl Image {
         })
         .collect();
         
+        let sin = 0.1.sin();
+        let cos = 0.1.cos();
+        let rotation_matrix = Matrix4::new(
+            cos, 0.0, sin, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            -sin, 0.0, cos, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        );
+
         Image {
             width,
             height,
             pixels,
             vertexes,
-            view_vertexes
+            view_vertexes,
+            rotation_matrix
         }
     }
 
     pub fn width(&self) -> u32 {
         self.width
     }
-
     pub fn height(&self) -> u32 {
         self.height
     }
-
     pub fn pixels(&self) -> *const Pixel {
         self.pixels.as_ptr()
     }
-
     pub fn vertexes(&self) -> *const Vertex {
         self.vertexes.as_ptr()
     }
-
     pub fn view_vertexes(&self) -> *const Vertex {
         self.view_vertexes.as_ptr()
     }
 
+    pub fn tick(&mut self) {
+        let mut rng = rand::thread_rng();
+        let row = rng.gen_range(0, self.height);
+        let col = rng.gen_range(0, self.width);
+
+        let idx = self.get_index(row, col);
+        self.pixels[idx].r = self.pixels[idx].r ^ 255;
+        self.pixels[idx].g = self.pixels[idx].g ^ 255;
+        self.pixels[idx].b = self.pixels[idx].b ^ 255;
+    }
+
+    pub fn rotate(&mut self) {
+        for vertex in self.vertexes.iter_mut() {
+            *vertex = self.rotation_matrix * *vertex;
+        }
+    }
 
     pub fn translate_to_camera(&mut self) {
         utils::set_panic_hook();
@@ -137,15 +149,19 @@ impl Image {
     }
 
     pub fn map_view_on_image(&mut self) {
+        for pixel in self.pixels.iter_mut() {
+            pixel.r = 255;
+            pixel.g = 255;
+            pixel.b = 255;
+        }
         for vertex in self.view_vertexes.iter() {
             let x = (vertex.data[0] * self.width as f64 / 2.0 + self.width as f64 / 2.0).round() as u32;
             let y = (-vertex.data[1] * self.height as f64 / 2.0 + self.height as f64 / 2.0).round() as u32;
 
-            let index = y * self.width + x;
-            if index >= self.width * self.height {
+            let index = (y * self.width + x) as usize;
+            if index >= self.pixels.len() {
                 continue;
             }
-            let index = index as usize;
             self.pixels[index].r = 0;
             self.pixels[index].g = 0;
             self.pixels[index].b = 0;

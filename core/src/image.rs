@@ -42,13 +42,23 @@ impl Image {
         );
 
         let world = World::new();
+
+        let camera = Camera::new(
+            std::f64::consts::PI / 4.,
+            f_width / f_height,
+            0.1,
+            100.,
+            &Point3::new(1., 1., 1.),
+            &Vector3::new(-1., -1., -1.).normalize(),
+            &Vector3::new(0., 1., 0.)
+        );
                         
         Image {
             width,
             height,
             pixels,
             world,
-            camera: Camera::new(std::f64::consts::PI / 4., f_width / f_height, 0.1, 100.),
+            camera,
             to_screen_matrix
         }
     }
@@ -81,8 +91,12 @@ impl Image {
         self.world.set_object_translaiton(object_handle, x, y, z);
     }
 
-    pub fn move_camera_on(&mut self, d_toward: f64, d_right: f64, d_up:f64) {
-        self.camera.mov_on(d_toward, d_right, d_up);
+    // pub fn move_camera_on(&mut self, d_toward: f64, d_right: f64, d_up:f64) {
+    //     self.camera.mov_on(d_toward, d_right, d_up);
+    // }
+
+    pub fn set_camera_param(&mut self, param_id: u32, param_value: f64) {
+        self.camera.set_param(param_id, param_value);
     }
 
     fn clear_world(&mut self) {
@@ -146,16 +160,19 @@ impl Image {
         set_panic_hook();
         self.clear_world();
 
+        self.camera.tick();
+
         let look_at = self.camera.look_at_matrix;
 
         let projection = self.camera.projection_matrix;
 
         let to_screen = self.to_screen_matrix;
+
+        let object_independent_matrix = projection * look_at;
         
         for obj in self.world.objects.iter_mut() {
             let to_world = obj.translation_matrix * obj.scale_matrix * obj.rotation_matrix;
-            // let final_matrix = object_independent_matrix * to_world;
-            let final_matrix = projection * look_at * to_world;
+            let final_matrix = object_independent_matrix * to_world;
 
             let view_vertexes: Vec<Vertex> = obj.vertexes.iter().map(|vertex| {
                 let v = final_matrix * *vertex;
@@ -166,7 +183,7 @@ impl Image {
                 let x = v[(0, 0)];
                 let y = v[(1, 0)];
                 let z = v[(2, 0)];
-                obj.vertexes_viewvable[i] = x < 1. && x > -1. && y < 1. && y > -1. && z > 0. && z < 1.;
+                obj.vertexes_viewvable[i] = Self::check_vertexes(x, y, z);
             }
 
             

@@ -44,13 +44,13 @@ let scale = 0.0;
     image.add_object_vertex(objHandler0, 0, 1, 0, 1);
     image.add_object_vertex(objHandler0, 0, 0, 1, 1);
 
-    // image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 2, 0, 0);
-    // image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 3, 0, 0);
-    // image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 2, 0, 0);
+    image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 2, 0, 0);
+    image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 3, 0, 0);
+    image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 2, 0, 0);
 
-    image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
-    image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 0, 0, 0);
-    image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 0, 0, 0);
+    // image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
+    // image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 0, 0, 0);
+    // image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 0, 0, 0);
 
     image.set_object_scale(objHandler0, 0.5);
 
@@ -121,15 +121,10 @@ let scale = 0.0;
 
     const rotationLoop = () => {
         if (!loop) {
-            requestAnimationFrame(rotationLoop);
-            return;
+            angle += 0.01;
+            image.set_object_rotation(objHandler1, 0, angle, 0);
         }
-        angle += 0.01;
-        // image.rotate(angle);
-        image.set_object_rotation(objHandler1, 0, angle, 0);
-        // image.set_object_rotation(objHandler2, 0, angle, 0);
-        // // image.set_object_rotation(objHandler3, 0, angle * 2, 0);
-        // image.set_object_rotation(objHandler3, 0, angle, 0);
+
         image.compute();
         render();
         requestAnimationFrame(rotationLoop);
@@ -137,25 +132,50 @@ let scale = 0.0;
 
     requestAnimationFrame(rotationLoop);
 
-    document.addEventListener('keydown', (e) => {
+    let pressedKeys = {};
+
+    document.addEventListener('keyup', (e) => {
+        pressedKeys[e.code] = false;
         switch (e.code) {
-            case "KeyW": // toward
-                image.move_camera_on(camera_speed, 0, 0);
-                break;
-            case "KeyS": // backward
-                image.move_camera_on(-camera_speed, 0, 0);
-                break;
             case "KeyA": // left
-                image.move_camera_on(0, -camera_speed, 0);
-                break;
             case "KeyD": // right
-                image.move_camera_on(0, camera_speed, 0);
+                image.set_camera_param(1, 0);
                 break;
             case "KeyQ": // up
-                image.move_camera_on(0, 0, camera_speed);
+            case "KeyE": // down
+                image.set_camera_param(2, 0);
+                break;
+            case "KeyW": // toward
+            case "KeyS": // backward
+                image.set_camera_param(3, 0);
+                break;
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        console.log(e);
+        if (pressedKeys[e.code])
+            return;
+        pressedKeys[e.code] = true;
+
+        switch (e.code) {
+            case "KeyD": // right
+                image.set_camera_param(1, 0.1);
+                break;
+            case "KeyA": // left
+                image.set_camera_param(1, -0.1);
+                break;
+            case "KeyQ": // up
+                image.set_camera_param(2, 0.1);
                 break;
             case "KeyE": // down
-                image.move_camera_on(0, 0, -camera_speed);
+                image.set_camera_param(2, -0.1);
+                break;
+            case "KeyW": // toward
+                image.set_camera_param(3, 0.1);
+                break;
+            case "KeyS": // backward
+                image.set_camera_param(3, -0.1);
                 break;
             case "Space":
                 loop = !loop;

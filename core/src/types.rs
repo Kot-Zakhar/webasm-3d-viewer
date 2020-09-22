@@ -14,7 +14,6 @@ pub struct Pixel {
 }
 
 pub type Vertex = Vector4<f64>;
-pub type TransformationMatrix = Matrix4<f64>;
 
 pub fn _diagonal(val: f64) -> Matrix4<f64> {
     Matrix4::new(

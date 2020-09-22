@@ -120,7 +120,7 @@ let scale = 0.0;
     let loop = true;
 
     const rotationLoop = () => {
-        if (!loop) {
+        if (loop) {
             angle += 0.01;
             image.set_object_rotation(objHandler1, 0, angle, 0);
         }
@@ -149,6 +149,14 @@ let scale = 0.0;
             case "KeyS": // backward
                 image.set_camera_param(3, 0);
                 break;
+            case "ArrowUp":
+            case "ArrowDown":
+                image.set_camera_param(11, 0);
+                break;
+            case "ArrowRight":
+            case "ArrowLeft":
+                image.set_camera_param(12, 0);
+                break;
         }
     });
 
@@ -160,22 +168,34 @@ let scale = 0.0;
 
         switch (e.code) {
             case "KeyD": // right
-                image.set_camera_param(1, 0.1);
+                image.set_camera_param(1, 0.05);
                 break;
             case "KeyA": // left
-                image.set_camera_param(1, -0.1);
+                image.set_camera_param(1, -0.05);
                 break;
             case "KeyQ": // up
-                image.set_camera_param(2, 0.1);
+                image.set_camera_param(2, 0.05);
                 break;
             case "KeyE": // down
-                image.set_camera_param(2, -0.1);
+                image.set_camera_param(2, -0.05);
                 break;
             case "KeyW": // toward
-                image.set_camera_param(3, 0.1);
+                image.set_camera_param(3, 0.05);
                 break;
             case "KeyS": // backward
-                image.set_camera_param(3, -0.1);
+                image.set_camera_param(3, -0.05);
+                break;
+            case "ArrowUp":
+                image.set_camera_param(11, -0.05);
+                break;
+            case "ArrowDown":
+                image.set_camera_param(11, 0.05);
+                break;
+            case "ArrowRight":
+                image.set_camera_param(12, 0.05);
+                break;
+            case "ArrowLeft":
+                image.set_camera_param(12, -0.05);
                 break;
             case "Space":
                 loop = !loop;

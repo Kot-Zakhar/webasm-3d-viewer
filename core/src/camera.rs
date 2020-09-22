@@ -10,7 +10,7 @@ pub struct Camera {
     pub look_at_matrix: Matrix4<f64>,
     pub projection_matrix: Matrix4<f64>,
     speed: Vector3<f64>,
-    // rotation_step_angle_value: f64,
+    rotation: Vector3<f64> // pitch, yaw, scroll
 }
 
 impl Camera {
@@ -87,17 +87,33 @@ impl Camera {
             Point3::<f64>::origin().to_homogeneous()
         ]);
 
-        // let direction = - self.front;
-        
-        // let right = self.world_up.cross(&direction).normalize();
-        // let up = direction.cross(&right).normalize();
-        
-        
-        // self.position += self.front * d_toward + right * d_right + up * d_up;
-        let homo = camera_rud_matrix * on.to_homogeneous();
-        unsafe { log(&format!("{}, {}, {}, {}", homo[0], homo[1], homo[2], homo[3])) }
-        let transformed_on = Vector3::<f64>::from_homogeneous(homo).unwrap();
+        let transformed_on_homogenized = camera_rud_matrix * on.to_homogeneous();
+        let transformed_on = Vector3::<f64>::from_homogeneous(transformed_on_homogenized).unwrap();
         self.position = self.position + transformed_on;
+        self.update_look_at();
+    }
+
+    fn rotate_on(&mut self, pitch: f64, yaw: f64, scroll: f64) {
+
+        let direction = -self.front;
+        let right = self.world_up.cross(&direction).normalize();
+        let up = direction.cross(&right);
+
+        let camera_rud_matrix = Matrix4::from_columns(&[
+            right.to_homogeneous(),
+            up.to_homogeneous(),
+            direction.to_homogeneous(),
+            Point3::<f64>::origin().to_homogeneous()
+        ]);
+
+        let desired_front = Vector3::new(
+            yaw.sin(),
+            -pitch.sin(),
+            yaw.cos() * -pitch.cos()
+        ).normalize();
+
+        let new_front_homogenized = camera_rud_matrix * desired_front.to_homogeneous();
+        self.front = Vector3::<f64>::from_homogeneous(new_front_homogenized).unwrap();
         self.update_look_at();
     }
 
@@ -106,11 +122,15 @@ impl Camera {
             1 => self.speed[0] = action_value, // speed of camera on x axes
             2 => self.speed[1] = action_value, // speed of camera on y axes
             3 => self.speed[2] = -action_value, // speed of camera on z axes
+            11 => self.rotation[0] = action_value,
+            12 => self.rotation[1] = action_value,
+            13 => self.rotation[2] = action_value,
             _ => unsafe { log(&"Not recognized action") }
         }
     }
 
     pub fn tick(&mut self) {
+        self.rotate_on(self.rotation[0], self.rotation[1], self.rotation[2]);
         self.move_on(self.speed);
     }
 
@@ -133,7 +153,8 @@ impl Camera {
             front,
             look_at_matrix: Camera::compute_look_at(&position, &(position + front), &world_up),
             projection_matrix: Camera::compute_projection_matrix(fov, aspect, z_near, z_far),
-            speed: Vector3::new(0., 0., 0.)
+            speed: Vector3::new(0., 0., 0.),
+            rotation: Vector3::new(0., 0., 0.)
         }
     }
 }

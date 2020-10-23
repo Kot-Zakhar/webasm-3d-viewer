@@ -2,16 +2,18 @@ pub use nalgebra::{
     Vector3, Vector4,
     Matrix3, Matrix4,
     RowVector3, RowVector4,
-    Point3,
+    Point3, Point4,
     Perspective3
 };
 
+#[derive(Copy, Clone)]
 pub struct Pixel {
     pub r: u8,
     pub g: u8,
     pub b: u8,
     pub a: u8
 }
+
 
 pub type Vertex = Vector4<f64>;
 

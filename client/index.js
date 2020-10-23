@@ -1,10 +1,6 @@
 import { Image } from "3d_engine_core";
 import { memory } from "3d_engine_core/graphics_engine_core_bg";
 
-const CELL_SIZE = 2; // px
-const WHITE_COLOR = "#FFFFFF";
-const BLACK_COLOR = "#000000";
-
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -25,10 +21,8 @@ let scale = 0.0;
 
     let rawFaces = [];
     let facesRes = await fetch("/raw/f");
-    // console.log(facesRes);
     if (facesRes.ok) {
         rawFaces = await facesRes.json();
-        // console.log(rawFaces);
     } else {
         console.log("Could not get faces.");
     }
@@ -37,7 +31,8 @@ let scale = 0.0;
     const image = Image.new(width, height);
 
     // gismo
-    const objHandler0 = image.new_object();
+    // const objHandler0 = image.new_object();
+    const objHandler0 = -1;
     
     image.add_object_vertex(objHandler0, 0, 0, 0, 1);
     image.add_object_vertex(objHandler0, 1, 0, 0, 1);
@@ -45,12 +40,8 @@ let scale = 0.0;
     image.add_object_vertex(objHandler0, 0, 0, 1, 1);
 
     image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 2, 0, 0);
-    image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 3, 0, 0);
-    image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 2, 0, 0);
-
-    // image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
-    // image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 0, 0, 0);
-    // image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 0, 0, 0);
+    image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 1, 0, 0);
+    image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 3, 0, 0);
 
     image.set_object_scale(objHandler0, 0.5);
 
@@ -73,30 +64,15 @@ let scale = 0.0;
             f[1].v - 1, f[1].vt - 1, (f[1].vn || 1) - 1,
             f[2].v - 1, f[2].vt - 1, (f[2].vn || 1) - 1
         );
-        // image.add_face(objHandler2,
-        //     f[0].v - 1, f[0].vt - 1, (f[0].vn || 1) -1,
-        //     f[1].v - 1, f[1].vt - 1, (f[1].vn || 1) -1,
-        //     f[2].v - 1, f[2].vt - 1, (f[2].vn || 1) -1
-        // );
-        // image.add_face(objHandler3,
-        //     f[0].v - 1, f[0].vt - 1, (f[0].vn || 1) -1,
-        //     f[1].v - 1, f[1].vt - 1, (f[1].vn || 1) -1,
-        //     f[2].v - 1, f[2].vt - 1, (f[2].vn || 1) -1
-        // );
     });
 
-    // image.set_object_scale(objHandler1, 10);
     image.set_object_scale(objHandler1, 0.5);
+    // image.set_object_scale(objHandler1, 10);
+    // image.set_object_translaiton(objHandler1, 0, 1, 0);
 
-    // image.set_object_scale(objHandler2, 2);
-    // image.set_object_translaiton(objHandler2, 2, 0, 2);
-
-    // image.set_object_scale(objHandler3, 5);
-    // image.set_object_translaiton(objHandler3, 10, 0, 10);
-    // image.set_object_rotation(objHandler3, 0, Math.PI / 2, 0);
-    
-
-
+    // fps stuff
+    let lastLoop = new Date();
+    let fpsLabel = document.getElementById("fps-label");
 
     const pixelsPtr = image.get_pixels();
     const pixels = new Uint8ClampedArray(memory.buffer, pixelsPtr, width * height * 4);
@@ -113,21 +89,25 @@ let scale = 0.0;
         ctx.putImageData(palette, 0, 0);
     }
 
-    image.compute()
+    image.compute();
     render();
 
     let angle = 0;
-    let loop = true;
+    let loop = false;
 
     const rotationLoop = () => {
         if (loop) {
             angle += 0.01;
             image.set_object_rotation(objHandler1, 0, angle, 0);
         }
-
         image.compute();
         render();
         requestAnimationFrame(rotationLoop);
+        
+        var thisLoop = new Date();
+        var fps = 1000 / (thisLoop - lastLoop);
+        lastLoop = thisLoop;
+        fpsLabel.innerHTML = Math.round(fps);
     }
 
     requestAnimationFrame(rotationLoop);
@@ -168,34 +148,34 @@ let scale = 0.0;
 
         switch (e.code) {
             case "KeyD": // right
-                image.set_camera_param(1, 0.05);
+                image.set_camera_param(1, 0.01);
                 break;
             case "KeyA": // left
-                image.set_camera_param(1, -0.05);
+                image.set_camera_param(1, -0.01);
                 break;
             case "KeyQ": // up
-                image.set_camera_param(2, 0.05);
+                image.set_camera_param(2, 0.01);
                 break;
             case "KeyE": // down
-                image.set_camera_param(2, -0.05);
+                image.set_camera_param(2, -0.01);
                 break;
             case "KeyW": // toward
-                image.set_camera_param(3, 0.05);
+                image.set_camera_param(3, 0.01);
                 break;
             case "KeyS": // backward
-                image.set_camera_param(3, -0.05);
+                image.set_camera_param(3, -0.01);
                 break;
             case "ArrowUp":
-                image.set_camera_param(11, -0.05);
+                image.set_camera_param(11, -0.01);
                 break;
             case "ArrowDown":
-                image.set_camera_param(11, 0.05);
+                image.set_camera_param(11, 0.01);
                 break;
             case "ArrowRight":
-                image.set_camera_param(12, 0.05);
+                image.set_camera_param(12, 0.01);
                 break;
             case "ArrowLeft":
-                image.set_camera_param(12, -0.05);
+                image.set_camera_param(12, -0.01);
                 break;
             case "Space":
                 loop = !loop;

@@ -39,8 +39,8 @@ impl Camera {
     }
 
     fn compute_projection_matrix(fov: f64, aspect_ration: f64, z_near: f64, z_far: f64) -> Matrix4<f64> {
-        // let w = 0.5;
-        // let h = w / aspect_ration;
+        let w = 0.1;
+        let h = w / aspect_ration;
 
         let n = z_near;
         let f = z_far;
@@ -130,6 +130,7 @@ impl Camera {
     }
 
     pub fn tick(&mut self) {
+        // unsafe { log(&format!("front from tick: {} {} {}", self.front[0], self.front[1], self.front[2])) };
         self.rotate_on(self.rotation[0], self.rotation[1], self.rotation[2]);
         self.move_on(self.speed);
     }

@@ -2,13 +2,17 @@ use crate::object::Object;
 use crate::types::*;
 
 pub struct World {
-    pub objects: Vec<Object>
+    pub objects: Vec<Object>,
+    pub object_norms_and_light_angles_cos: Vec<Vec<f64>>,
+    pub light_direction: Vector4<f64>
 }
 
 impl World {
     pub fn new() -> World {
         World {
-            objects: Vec::new()
+            objects: Vec::new(),
+            object_norms_and_light_angles_cos: Vec::new(),
+            light_direction: Vector4::new(-1., -1., -1., 0.).normalize()
         }
     }
 
@@ -21,6 +25,7 @@ impl World {
             vertexes: Vec::new(),
             vertexes_viewvable: Vec::new(),
             faces: Vec::new(),
+            normals: Vec::new(),
 
             rotation_matrix: _one(),
             scale_matrix: _one(),
@@ -28,6 +33,7 @@ impl World {
         };
 
         self.objects.push(obj);
+        self.object_norms_and_light_angles_cos.push(Vec::new());
         (self.objects.len() - 1) as u32
     }
 
@@ -39,7 +45,9 @@ impl World {
 
     pub fn add_object_face(&mut self, object_handle: u32, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) {
         if self.is_handle_exist(object_handle) {
-            self.objects[object_handle as usize].add_face(v0, vt0, vn0, v1, vt1, vn1, v2, vt2, vn2);
+            let i = self.objects[object_handle as usize].add_face(v0, vt0, vn0, v1, vt1, vn1, v2, vt2, vn2);
+            let cos = self.objects[object_handle as usize].normals[i].dot(&(-self.light_direction));
+            self.object_norms_and_light_angles_cos[object_handle as usize].push(cos);
         }
     }
 
@@ -60,5 +68,8 @@ impl World {
             self.objects[object_handle as usize].set_translaiton(x, y, z);
         }
     }
+
+    // pub fn set_light_direction()
+    // pub fn set_light_position()
 
 }

@@ -4,6 +4,7 @@ pub struct Object {
     pub vertexes: Vec<Vertex>,
     pub vertexes_viewvable: Vec<bool>,
     pub faces: Vec<Matrix3<u32>>,
+    pub normals: Vec<Vector4<f64>>,
     
     // world_position stuff
     pub rotation_matrix: Matrix4<f64>,
@@ -17,12 +18,16 @@ impl Object {
         self.vertexes_viewvable.push(true);
     }
 
-    pub fn add_face(&mut self, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) {
+    pub fn add_face(&mut self, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) -> usize {
         self.faces.push(Matrix3::new(
             v0, v1, v2,
             vt0, vt1, vt2,
             vn0, vn1, vn2
         ));
+        let a = Vector3::from_homogeneous(self.vertexes[v1 as usize] - self.vertexes[v0 as usize]).unwrap();
+        let b = Vector3::from_homogeneous(self.vertexes[v2 as usize] - self.vertexes[v0 as usize]).unwrap();
+        self.normals.push(a.cross(&b).normalize().to_homogeneous());
+        self.faces.len() - 1
     }
 
 

@@ -75,28 +75,33 @@ impl Image {
         self.pixels.as_ptr()
     }
 
-    pub fn add_object_vertex(&mut self, object_handle: u32, x:f64, y:f64, z:f64, w:f64) {
+    pub fn add_object_vertex(&mut self, object_handle: usize, x:f64, y:f64, z:f64, w:f64) {
         self.world.add_object_vertex(object_handle, x, y, z, w);
     }
 
-    pub fn add_object_face(&mut self, object_handle: u32, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) {
+    pub fn add_object_face(&mut self, object_handle: usize, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) {
         self.world.add_object_face(object_handle, v0, vt0, vn0, v1, vt1, vn1, v2, vt2, vn2);
     }
 
-    pub fn set_object_rotation(&mut self, object_handle: u32, angle_x: f64, angle_y: f64, angle_z: f64) {
+
+    pub fn set_object_rotation(&mut self, object_handle: usize, angle_x: f64, angle_y: f64, angle_z: f64) {
         self.world.set_object_rotation(object_handle, angle_x, angle_y, angle_z);
     }
 
-    pub fn set_object_scale(&mut self, object_handle: u32, scale: f64) {
+    pub fn set_object_scale(&mut self, object_handle: usize, scale: f64) {
         self.world.set_object_scale(object_handle, scale);
     }
 
-    pub fn set_object_translaiton(&mut self, object_handle: u32, x: f64, y: f64, z:f64) {
+    pub fn set_object_translaiton(&mut self, object_handle: usize, x: f64, y: f64, z:f64) {
         self.world.set_object_translaiton(object_handle, x, y, z);
     }
 
     pub fn set_camera_param(&mut self, param_id: u32, param_value: f64) {
         self.camera.set_param(param_id, param_value);
+    }
+
+    pub fn set_light_param(&mut self, param_id: u32, param_value: f64) {
+        
     }
 
     fn clear_image(&mut self) {
@@ -113,7 +118,7 @@ impl Image {
 
 
     fn is_faced_towards_viewer(&v1: &Vector4<f64>, &v2: &Vector4<f64>, &v3: &Vector4<f64>) -> bool {
-        (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v3[0] - v1[0]) * (v2[1] - v1[1]) >= 0.
+        (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v3[0] - v1[0]) * (v2[1] - v1[1]) < 0.
     }
 
     pub fn compute(&mut self) {
@@ -132,14 +137,12 @@ impl Image {
 
         let view_box_1 = to_screen * Vertex::new(-1., 1., 0., 1.);
         let view_box_2 = to_screen * Vertex::new(1., -1., 1., 1.);
-        // unsafe { log(&format!("front from tick:\n{} {} {}\n{} {} {}", view_box_1[0], view_box_1[1], view_box_1[2], view_box_2[0], view_box_2[1], view_box_2[2])) };
 
         for (object_index, obj) in self.world.objects.iter_mut().enumerate() {
             let to_world = obj.translation_matrix * obj.scale_matrix * obj.rotation_matrix;
             let final_matrix = object_independent_matrix * to_world;
 
-
-            let mut view_vertexes: Vec<Vertex> = obj.vertexes.iter().map(|vertex| {
+            let view_vertexes: Vec<Vertex> = obj.vertexes.iter().map(|vertex| {
                 let mut v = final_matrix * *vertex;
                 v = v / v[3];
                 v
@@ -162,7 +165,8 @@ impl Image {
                     continue;
                 }
 
-                if Self::is_faced_towards_viewer(&view_vertexes[i0], &view_vertexes[i1], &view_vertexes[i2]) {
+                // not drawing faces wich are faced away from the viewer
+                if !Self::is_faced_towards_viewer(&view_vertexes[i0], &view_vertexes[i1], &view_vertexes[i2]) {
                     continue;
                 }
 

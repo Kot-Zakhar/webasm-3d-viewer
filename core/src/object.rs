@@ -4,7 +4,7 @@ pub struct Object {
     pub vertexes: Vec<Vertex>,
     pub vertexes_viewvable: Vec<bool>,
     pub faces: Vec<Matrix3<u32>>,
-    pub normals: Vec<Vector4<f64>>,
+    pub face_normals: Vec<Vector4<f64>>,
     
     // world_position stuff
     pub rotation_matrix: Matrix4<f64>,
@@ -26,7 +26,7 @@ impl Object {
         ));
         let a = Vector3::from_homogeneous(self.vertexes[v1 as usize] - self.vertexes[v0 as usize]).unwrap();
         let b = Vector3::from_homogeneous(self.vertexes[v2 as usize] - self.vertexes[v0 as usize]).unwrap();
-        self.normals.push(a.cross(&b).normalize().to_homogeneous());
+        self.face_normals.push(a.cross(&b).normalize().to_homogeneous());
         self.faces.len() - 1
     }
 

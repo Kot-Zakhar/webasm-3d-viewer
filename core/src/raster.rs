@@ -45,9 +45,9 @@ pub fn draw_line<T>(pixels: &mut Vec<T>, width: u32, height: u32, mut x0: i32, m
     }
 }
 
-// fn draw_face(pixels: &mut Vec<Pixel>, width: u32, height: u32,
-pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: u32, height: u32,
-    v1: &Vertex, v2: &Vertex, v3: &Vertex, &color: &Pixel, &lineColor: &Pixel) {
+pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, height: i32,
+    v1: &Vertex, v2: &Vertex, v3: &Vertex, is_partial: bool, &color: &Pixel, &lineColor: &Pixel
+) {
 
     let mut v1 = v1;
     let mut v2 = v2;
@@ -95,12 +95,16 @@ pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: u32, heig
     let x3 = x3 as i32;
 
     for i in y1..y2 {
-        
-        for j in wx1.floor() as i32 .. wx2.ceil() as i32 {
-            let index = get_index(i as u32, j as u32, width);
-            if z_buf[index] == 0. || z < z_buf[index] {
-                z_buf[index] = z;
-                pixels[index] = color;
+        if !is_partial || !(i < 0 || i >= height) {
+            for j in wx1.floor() as i32 .. wx2.ceil() as i32 {
+                if is_partial && (j < 0 || j >= width) {
+                    continue;
+                }
+                let index = get_index(i as u32, j as u32, width as u32);
+                if z_buf[index] == 0. || z < z_buf[index] {
+                    z_buf[index] = z;
+                    pixels[index] = color;
+                }
             }
         }
 
@@ -135,14 +139,18 @@ pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: u32, heig
     }
     
     for i in y2..y3 {
-        for j in wx1.floor() as i32 .. wx2.ceil() as i32 {
-            let index = get_index(i as u32, j as u32, width);
-            if z_buf[index] == 0. || z < z_buf[index] {
-                z_buf[index] = z;
-                pixels[index] = color;
+        if !is_partial || !(i < 0 || i >= height) {
+            for j in wx1.floor() as i32 .. wx2.ceil() as i32 {
+                if is_partial && (j < 0 || j >= width) {
+                    continue;
+                }
+                let index = get_index(i as u32, j as u32, width as u32);
+                if z_buf[index] == 0. || z < z_buf[index] {
+                    z_buf[index] = z;
+                    pixels[index] = color;
+                }
             }
         }
-        
         // let border1_index = get_index(i as u32, wx1.floor() as u32, width);
         // if z_buf[border1_index] == 0. || z < z_buf[border1_index] {
         //     z_buf[border1_index] = z - 0.0001;

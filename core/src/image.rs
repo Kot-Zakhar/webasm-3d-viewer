@@ -157,7 +157,8 @@ impl Image {
                 let i1 = face[(0, 1)] as usize;
                 let i2 = face[(0, 2)] as usize;
 
-                if !obj.vertexes_viewvable[i0] || !obj.vertexes_viewvable[i1] || !obj.vertexes_viewvable[i2] {
+                // face is completely out of the screen
+                if !obj.vertexes_viewvable[i0] && !obj.vertexes_viewvable[i1] && !obj.vertexes_viewvable[i2] {
                     continue;
                 }
 
@@ -173,7 +174,10 @@ impl Image {
                     a: color.a
                 };
 
-                raster::draw_face(&mut self.pixels, &mut self.z_buf, self.width, self.height, &view_vertexes[i0], &view_vertexes[i1], &view_vertexes[i2], &face_color, &line_color);
+                let is_partial = !(obj.vertexes_viewvable[i0] && obj.vertexes_viewvable[i1] && obj.vertexes_viewvable[i2]);
+
+                raster::draw_face(&mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32, 
+                    &view_vertexes[i0], &view_vertexes[i1], &view_vertexes[i2], is_partial, &face_color, &line_color);
             }
     
         }

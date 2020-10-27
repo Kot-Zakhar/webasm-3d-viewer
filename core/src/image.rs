@@ -51,7 +51,7 @@ impl Image {
             f_width / f_height,
             0.1,
             100.,
-            &Point3::new(1., 1., 1.),
+            &Point3::new(1.5, 1.5, 1.5),
             &Vector3::new(-1., -1., -1.).normalize(),
             &Vector3::new(0., 1., 0.)
         );
@@ -148,74 +148,73 @@ impl Image {
         let view_box_1 = to_screen * Vertex::new(-1., 1., 0., 1.);
         let view_box_2 = to_screen * Vertex::new(1., -1., 1., 1.);
 
-        let translated_direct_light_direction = object_independent_matrix * self.world.direct_light_direction;
+        // let translated_to_object_direct_light_direction = object_independent_matrix * self.world.direct_light_direction;
 
         for (object_index, obj) in self.world.objects.iter_mut().enumerate() {
             let to_world = obj.translation_matrix * obj.scale_matrix * obj.rotation_matrix;
             let final_matrix = object_independent_matrix * to_world;
 
-            let view_vertexes: Vec<Vertex> = obj.vertexes.iter().map(|vertex| {
+            let translated_to_object_direct_light_direction = obj.rotation_matrix.transpose() * self.world.direct_light_direction;
+
+            let view_vertices: Vec<Vertex> = obj.vertices.iter().map(|vertex| {
                 let mut v = final_matrix * *vertex;
                 v = v / v[3];
                 v
             }).collect();
 
-            for (i, v) in view_vertexes.iter().enumerate() {
-                obj.vertexes_viewvable[i] = Self::check_vertex_in_view_box(v, &view_box_1, &view_box_2);
+            for (i, v) in view_vertices.iter().enumerate() {
+                obj.vertices_viewvable[i] = Self::check_vertex_in_view_box(v, &view_box_1, &view_box_2);
             }
 
             let color = Pixel{r:255, g:255, b:255, a:255};
             let line_color = Pixel{r:50, g:50, b:255, a:255};
             
             for (face_index, face) in obj.faces.iter().enumerate() {
-                let i0 = face.vertexes_indexes[0] as usize;
-                let i1 = face.vertexes_indexes[1] as usize;
-                let i2 = face.vertexes_indexes[2] as usize;
-
-                let in0 = face.vertexes_normals_indexes[0] as usize;
-                let in1 = face.vertexes_normals_indexes[1] as usize;
-                let in2 = face.vertexes_normals_indexes[2] as usize;
+                let i0 = face.vertices_indexes[0] as usize;
+                let i1 = face.vertices_indexes[1] as usize;
+                let i2 = face.vertices_indexes[2] as usize;
 
                 // face is completely out of the screen
-                if !obj.vertexes_viewvable[i0] && !obj.vertexes_viewvable[i1] && !obj.vertexes_viewvable[i2] {
+                if !obj.vertices_viewvable[i0] && !obj.vertices_viewvable[i1] && !obj.vertices_viewvable[i2] {
                     continue;
                 }
 
                 // not drawing faces wich are faced away from the viewer
-                if !Self::is_faced_towards_viewer(&view_vertexes[i0], &view_vertexes[i1], &view_vertexes[i2]) {
+                if !Self::is_faced_towards_viewer(&view_vertices[i0], &view_vertices[i1], &view_vertices[i2]) {
                     continue;
                 }
 
-                let is_partial = !(obj.vertexes_viewvable[i0] && obj.vertexes_viewvable[i1] && obj.vertexes_viewvable[i2]);
+                let is_partial = !(obj.vertices_viewvable[i0] && obj.vertices_viewvable[i1] && obj.vertices_viewvable[i2]);
 
 
 
                 //   Lambert shading (each polygon is colored with a single color)
-                let angle = self.world.objects_norms_and_light_angles_cos[object_index][face_index];
-                let face_color = Pixel{
-                    r: (color.r as f64 * angle) as u8,
-                    g: (color.g as f64 * angle) as u8,
-                    b: (color.b as f64 * angle) as u8,
-                    a: color.a
-                };
-                raster::draw_face(&mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32,
-                    &view_vertexes,
-                    &face,
-                    is_partial, &face_color
-                );
+                // let angle = self.world.objects_norms_and_light_angles_cos[object_index][face_index];
+                // let face_color = Pixel{
+                //     r: (color.r as f64 * angle) as u8,
+                //     g: (color.g as f64 * angle) as u8,
+                //     b: (color.b as f64 * angle) as u8,
+                //     a: color.a
+                // };
+                // raster::draw_face(&mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32,
+                //     &view_vertices,
+                //     &face,
+                //     is_partial, &face_color
+                // );
 
                 //   Phong shading ( interpolating normals of vertices to shade the triangle )
-                // raster::draw_face_phong(
-                //     &mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32,
-                //     &view_vertexes, &face,
-                //     &translated_direct_light_direction,
-                //     &color,
-                //     is_partial
-                // );
+                raster::draw_face_phong(
+                    &mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32,
+                    &view_vertices, &obj.vertices_normals,
+                    &face,
+                    &translated_to_object_direct_light_direction,
+                    &color,
+                    is_partial
+                );
 
 
                 // raster::draw_sides_of_face(&mut self.pixels, &mut self.z_buf, self.width, self.height, 
-                //     &view_vertexes, &face, is_partial, &line_color);
+                //     &view_vertices, &face, is_partial, &line_color);
             }
     
         }

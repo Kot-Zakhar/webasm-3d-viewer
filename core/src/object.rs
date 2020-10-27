@@ -1,16 +1,16 @@
 use crate::types::*;
 
 pub struct Face {
-    pub vertexes_indexes: Vector3<u32>,
-    pub texture_vertexes_indexes: Vector3<u32>,
-    pub vertexes_normals_indexes: Vector3<u32>,
+    pub vertices_indexes: Vector3<u32>,
+    pub texture_vertices_indexes: Vector3<u32>,
+    pub vertices_normals_indexes: Vector3<u32>,
     pub normal: Vector4<f64>
 }
 
 pub struct Object {
-    pub vertexes: Vec<Vertex>,
-    pub vertexes_normals: Vec<Vector4<f64>>,
-    pub vertexes_viewvable: Vec<bool>,
+    pub vertices: Vec<Vertex>,
+    pub vertices_normals: Vec<Vector4<f64>>,
+    pub vertices_viewvable: Vec<bool>,
     pub faces: Vec<Face>,
     
     // world_position stuff
@@ -21,22 +21,22 @@ pub struct Object {
 
 impl Object {
     pub fn add_vertex(&mut self, x: f64, y: f64, z: f64) {
-        self.vertexes.push(Vertex::new(x, y, z, 1.));
-        self.vertexes_viewvable.push(true);
+        self.vertices.push(Vertex::new(x, y, z, 1.));
+        self.vertices_viewvable.push(true);
     }
 
     pub fn add_vertex_normal(&mut self, x: f64, y: f64, z: f64) {
-        self.vertexes_normals.push(Vertex::new(x, y, z, 0.));
+        self.vertices_normals.push(Vertex::new(x, y, z, 0.));
     }
 
     pub fn add_face(&mut self, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) -> usize {
-        let a = Vector3::from_homogeneous(self.vertexes[v1 as usize] - self.vertexes[v0 as usize]).unwrap();
-        let b = Vector3::from_homogeneous(self.vertexes[v2 as usize] - self.vertexes[v0 as usize]).unwrap();
+        let a = Vector3::from_homogeneous(self.vertices[v1 as usize] - self.vertices[v0 as usize]).unwrap();
+        let b = Vector3::from_homogeneous(self.vertices[v2 as usize] - self.vertices[v0 as usize]).unwrap();
         self.faces.push(
             Face{
-                vertexes_indexes: Vector3::new(v0, v1,v2),
-                texture_vertexes_indexes: Vector3::new(vt0, vt1, vt2),
-                vertexes_normals_indexes: Vector3::new(vn0, vn1, vn2),
+                vertices_indexes: Vector3::new(v0, v1,v2),
+                texture_vertices_indexes: Vector3::new(vt0, vt1, vt2),
+                vertices_normals_indexes: Vector3::new(vn0, vn1, vn2),
                 normal: a.cross(&b).normalize().to_homogeneous()
             }
         );

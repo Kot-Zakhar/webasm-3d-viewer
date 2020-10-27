@@ -52,13 +52,13 @@ pub fn draw_line<T>(pixels: &mut Vec<T>, mut width: u32, mut height: u32, mut x0
 
 
 pub fn draw_sides_of_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: u32, height: u32,
-    vertexes: &Vec<Vector4<f64>>, face: &Face,
+    vertices: &Vec<Vector4<f64>>, face: &Face,
     is_partial: bool, lineColor: &Pixel
 ) {
     if is_partial { return }
-    let mut v1 = vertexes[face.vertexes_indexes[0] as usize];
-    let mut v2 = vertexes[face.vertexes_indexes[1] as usize];
-    let mut v3 = vertexes[face.vertexes_indexes[2] as usize];
+    let v1 = vertices[face.vertices_indexes[0] as usize];
+    let v2 = vertices[face.vertices_indexes[1] as usize];
+    let v3 = vertices[face.vertices_indexes[2] as usize];
     draw_line(
         pixels, width, height,
         v1[0].round() as i32, v1[1].round() as i32, v2[0].round() as i32, v2[1].round() as i32,
@@ -77,14 +77,14 @@ pub fn draw_sides_of_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: 
 }
 
 pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, height: i32,
-    vertexes: &[Vector4<f64>],
+    vertices: &[Vector4<f64>],
     face: &Face,
     is_partial: bool, color: &Pixel
 ) {
 
-    let mut v1 = &vertexes[face.vertexes_indexes[0] as usize];
-    let mut v2 = &vertexes[face.vertexes_indexes[1] as usize];
-    let mut v3 = &vertexes[face.vertexes_indexes[2] as usize];
+    let mut v1 = &vertices[face.vertices_indexes[0] as usize];
+    let mut v2 = &vertices[face.vertices_indexes[1] as usize];
+    let mut v3 = &vertices[face.vertices_indexes[2] as usize];
 
     // sort on y
     if v2[1] < v1[1] {
@@ -224,16 +224,17 @@ fn find_color_in_point(
     let v2p = point - v2;
     let v3p = point - v3;
     // let n = face_normal.magnitude();
-    let u = face_normal.dot(&v13.cross(&v1p)) / denom;
-    let v = face_normal.dot(&v31.cross(&v3p)) / denom;
-    let w = face_normal.dot(&v23.cross(&v2p)) / denom;
+    let w = v12.cross(&v1p).dot(&face_normal) / denom;
+    let u = v23.cross(&v2p).dot(&face_normal) / denom;
+    let v = v31.cross(&v3p).dot(&face_normal) / denom;
     // let u = v13.cross(&v1p).magnitude() / n;
     // let v = v12.cross(&v1p).magnitude() / n;
     // let w = v23.cross(&v1p).magnitude() / n;
-    unsafe {log(&format!("{}", u + v + w))}
-    let vn12 = vn2 - vn1;
-    let vn13 = vn3 - vn1;
-    let normal = u * vn1 + vn12 * v + vn13 * w;
+    // unsafe {log(&format!("{}", u + v + w))}
+    // let vn12 = vn2 - vn1;
+    // let vn23 = vn3 - vn2;
+    // let vn31 = vn1 - vn3;
+    let normal = vn1 * u + vn2 * v + vn3 * w;
     let cos = normal.dot(&(-direct_light_direction));
 
     Pixel{
@@ -245,19 +246,20 @@ fn find_color_in_point(
 }
 
 pub fn draw_face_phong(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, height: i32,
-    vertexes: &Vec<Vector4<f64>>,
+    vertices: &Vec<Vector4<f64>>,
+    vertices_normals_obj_space: &Vec<Vector4<f64>>,
     face: &Face,
-    direct_light_direction: &Vector4<f64>,
+    direct_light_direction_obj_space: &Vector4<f64>,
     color: &Pixel,
     is_partial: bool
 ) {
 
-    let mut v1 = &vertexes[face.vertexes_indexes[0] as usize];
-    let mut v2 = &vertexes[face.vertexes_indexes[1] as usize];
-    let mut v3 = &vertexes[face.vertexes_indexes[2] as usize];
-    let mut vn1 = &vertexes[face.vertexes_normals_indexes[0] as usize];
-    let mut vn2 = &vertexes[face.vertexes_normals_indexes[1] as usize];
-    let mut vn3 = &vertexes[face.vertexes_normals_indexes[2] as usize];
+    let mut v1 = &vertices[face.vertices_indexes[0] as usize];
+    let mut v2 = &vertices[face.vertices_indexes[1] as usize];
+    let mut v3 = &vertices[face.vertices_indexes[2] as usize];
+    let mut vn1 = &vertices_normals_obj_space[face.vertices_normals_indexes[0] as usize];
+    let mut vn2 = &vertices_normals_obj_space[face.vertices_normals_indexes[1] as usize];
+    let mut vn3 = &vertices_normals_obj_space[face.vertices_normals_indexes[2] as usize];
 
     // sort on y
     if v2[1] < v1[1] {
@@ -324,7 +326,7 @@ pub fn draw_face_phong(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32
                     if z_buf[index] == 0. || z_j < z_buf[index] {
                         z_buf[index] = z_j;
                         let point = Vector4::new(j as f64, i as f64, z_j, 1.);
-                        pixels[index] = find_color_in_point(&point, v1, v2, v3, vn1, vn2, vn3, direct_light_direction, color);
+                        pixels[index] = find_color_in_point(&point, v1, v2, v3, vn1, vn2, vn3, direct_light_direction_obj_space, color);
                     }
                 }
                 z_j += dz_k;
@@ -367,7 +369,7 @@ pub fn draw_face_phong(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32
                     if z_buf[index] == 0. || z_j < z_buf[index] {
                         z_buf[index] = z_j;
                         let point = Vector4::new(j as f64, i as f64, z_j, 1.);
-                        pixels[index] = find_color_in_point(&point, v1, v2, v3, vn1, vn2, vn3, direct_light_direction, color);
+                        pixels[index] = find_color_in_point(&point, v1, v2, v3, vn1, vn2, vn3, direct_light_direction_obj_space, color);
                     }
                 }
                 z_j += dz_k;

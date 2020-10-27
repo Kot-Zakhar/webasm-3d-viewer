@@ -23,9 +23,9 @@ impl World {
 
     pub fn new_object(&mut self) -> u32 {
         let obj = Object {
-            vertexes: Vec::new(),
-            vertexes_normals: Vec::new(),
-            vertexes_viewvable: Vec::new(),
+            vertices: Vec::new(),
+            vertices_normals: Vec::new(),
+            vertices_viewvable: Vec::new(),
             faces: Vec::new(),
 
             rotation_matrix: _one(),

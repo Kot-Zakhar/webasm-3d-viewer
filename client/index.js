@@ -10,21 +10,13 @@ let scale = 0.0;
 
 (async () => {
     // data fetching
-    let rawVertexes = [];
-    let vertexRes = await fetch("/raw/v");
-    if (vertexRes.ok) {
-        rawVertexes = await vertexRes.json();
+    let model;
+    let modelRes = await fetch("/raw/model");
+    if (modelRes.ok) {
+        model = await modelRes.json();
     } else {
-        alert("Cannot fetch vertexes");
+        alert("Cannot fetch model");
         return;
-    }
-
-    let rawFaces = [];
-    let facesRes = await fetch("/raw/f");
-    if (facesRes.ok) {
-        rawFaces = await facesRes.json();
-    } else {
-        console.log("Could not get faces.");
     }
 
     // core stuff
@@ -32,33 +24,32 @@ let scale = 0.0;
 
     // gismo
     // const objHandler0 = image.new_object();
-    const objHandler0 = -1;
     
-    image.add_object_vertex(objHandler0, 0, 0, 0, 1);
-    image.add_object_vertex(objHandler0, 1, 0, 0, 1);
-    image.add_object_vertex(objHandler0, 0, 1, 0, 1);
-    image.add_object_vertex(objHandler0, 0, 0, 1, 1);
+    // image.add_object_vertex(objHandler0, 0, 0, 0, 1);
+    // image.add_object_vertex(objHandler0, 1, 0, 0, 1);
+    // image.add_object_vertex(objHandler0, 0, 1, 0, 1);
+    // image.add_object_vertex(objHandler0, 0, 0, 1, 1);
 
-    image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 2, 0, 0);
-    image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 1, 0, 0);
-    image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 3, 0, 0);
+    // image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 2, 0, 0);
+    // image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 1, 0, 0);
+    // image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 3, 0, 0);
 
-    image.set_object_scale(objHandler0, 0.5);
+    // image.set_object_scale(objHandler0, 0.5);
+
 
     // objects
     // const objHandler1 = -1;
     const objHandler1 = image.new_object();
 
-    // const objHandler2 = image.new_object();
-    // const objHandler3 = image.new_object();
-
-    rawVertexes.forEach(v => {
-        image.add_object_vertex(objHandler1, v.x, v.y, v.z, v.w)
-        // image.add_vertex(objHandler2, v.x, v.y, v.z, v.w)
-        // image.add_vertex(objHandler3, v.x, v.y, v.z, v.w)
+    model.v.forEach(v => {
+        image.add_object_vertex(objHandler1, v.x, v.y, v.z)
     });
 
-    rawFaces.forEach(f => {
+    model.vn.forEach(vn => {
+        image.add_object_vertex_normal(objHandler1, vn.x, vn.y, vn.z);
+    })
+
+    model.f.forEach(f => {
         image.add_object_face(objHandler1,
             f[0].v - 1, f[0].vt - 1, (f[0].vn || 1) - 1,
             f[1].v - 1, f[1].vt - 1, (f[1].vn || 1) - 1,
@@ -67,8 +58,6 @@ let scale = 0.0;
     });
 
     image.set_object_scale(objHandler1, 0.5);
-    // image.set_object_scale(objHandler1, 10);
-    // image.set_object_translaiton(objHandler1, 0, 1, 0);
 
     // fps stuff
     let lastLoop = new Date();

@@ -3,8 +3,8 @@ use crate::types::*;
 use crate::object::*;
 use crate::console::log;
 
-pub fn get_index(row: u32, column: u32, width: u32) -> usize {
-    (row * width + column) as usize
+pub fn get_index(y: u32, x: u32, width: u32) -> usize {
+    (y * width + x) as usize
 }
 
 pub fn draw_line<T>(pixels: &mut Vec<T>, mut width: u32, mut height: u32, mut x0: i32, mut y0: i32, mut x1:i32, mut y1: i32, &color: &T) where T: Copy {
@@ -76,15 +76,18 @@ pub fn draw_sides_of_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: 
     );
 }
 
-pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, height: i32,
-    vertices: &[Vector4<f64>],
+pub fn draw_face_on_buffer(width: i32, height: i32,
+    z_buf: &mut [f64],
+    face_index_buffer: &mut [i32], face_index: usize,
+    object_index_buffer: &mut [i32], object_index: usize,
+    vertices: &Vec<Vec<Vector4<f64>>>,
     face: &Face,
-    is_partial: bool, color: &Pixel
+    is_partial: bool
 ) {
 
-    let mut v1 = &vertices[face.vertices_indexes[0] as usize];
-    let mut v2 = &vertices[face.vertices_indexes[1] as usize];
-    let mut v3 = &vertices[face.vertices_indexes[2] as usize];
+    let mut v1 = &vertices[object_index][face.vertices_indexes[0] as usize];
+    let mut v2 = &vertices[object_index][face.vertices_indexes[1] as usize];
+    let mut v3 = &vertices[object_index][face.vertices_indexes[2] as usize];
 
     // sort on y
     if v2[1] < v1[1] {
@@ -145,9 +148,10 @@ pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, heig
             for j in wx1.round() as i32 ..= wx2.round() as i32 {
                 if !is_partial || !(j < 0 || j >= width) {
                     let index = get_index(i as u32, j as u32, width as u32);
-                    if z_buf[index] == 0. || z_j < z_buf[index] {
+                    if z_j < z_buf[index] {
                         z_buf[index] = z_j;
-                        pixels[index] = *color;
+                        face_index_buffer[index] = face_index as i32;
+                        object_index_buffer[index] = object_index as i32;
                     }
                 }
                 z_j += dz_k;
@@ -187,9 +191,10 @@ pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, heig
             for j in wx1.round() as i32 ..= wx2.round() as i32 {
                 if !is_partial || !(j < 0 || j >= width) {
                     let index = get_index(i as u32, j as u32, width as u32);
-                    if z_buf[index] == 0. || z_j < z_buf[index] {
+                    if z_j < z_buf[index] {
                         z_buf[index] = z_j;
-                        pixels[index] = *color;
+                        face_index_buffer[index] = face_index as i32;
+                        object_index_buffer[index] = object_index as i32;
                     }
                 }
                 z_j += dz_k;
@@ -203,7 +208,7 @@ pub fn draw_face(pixels: &mut Vec<Pixel>, z_buf: &mut Vec<f64>, width: i32, heig
     }
 }
 
-fn find_color_in_point(
+pub fn find_color_in_point(
     point: &Vertex,
     v1: &Vertex, v2: &Vertex, v3: &Vertex,
     vn1: &Vector4<f64>, vn2: &Vector4<f64>, vn3: &Vector4<f64>,

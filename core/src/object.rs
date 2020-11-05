@@ -1,9 +1,9 @@
 use crate::types::*;
 
 pub struct Face {
-    pub vertices_indexes: Vector3<u32>,
-    pub texture_vertices_indexes: Vector3<u32>,
-    pub vertices_normals_indexes: Vector3<u32>,
+    pub vertices_indexes: Vector3<usize>,
+    pub texture_vertices_indexes: Vector3<usize>,
+    pub vertices_normals_indexes: Vector3<usize>,
     pub normal: Vector4<f64>
 }
 
@@ -29,9 +29,9 @@ impl Object {
         self.vertices_normals.push(Vertex::new(x, y, z, 0.));
     }
 
-    pub fn add_face(&mut self, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) -> usize {
-        let a = Vector3::from_homogeneous(self.vertices[v1 as usize] - self.vertices[v0 as usize]).unwrap();
-        let b = Vector3::from_homogeneous(self.vertices[v2 as usize] - self.vertices[v0 as usize]).unwrap();
+    pub fn add_face(&mut self, v0: usize, vt0: usize, vn0: usize, v1: usize, vt1: usize, vn1: usize, v2: usize, vt2: usize, vn2: usize) -> usize {
+        let a = Vector3::from_homogeneous(self.vertices[v1] - self.vertices[v0]).unwrap();
+        let b = Vector3::from_homogeneous(self.vertices[v2] - self.vertices[v0]).unwrap();
         self.faces.push(
             Face{
                 vertices_indexes: Vector3::new(v0, v1,v2),

@@ -50,7 +50,7 @@ impl World {
         self.objects[object_handle as usize].add_vertex_normal(x, y, z);
     }
 
-    pub fn add_object_face(&mut self, object_handle: usize, v0: u32, vt0: u32, vn0: u32, v1: u32, vt1: u32, vn1: u32, v2: u32, vt2: u32, vn2: u32) {
+    pub fn add_object_face(&mut self, object_handle: usize, v0: usize, vt0: usize, vn0: usize, v1: usize, vt1: usize, vn1: usize, v2: usize, vt2: usize, vn2: usize) {
         if !self.is_handle_exist(object_handle) { return }
 
         let i = self.objects[object_handle as usize].add_face(v0, vt0, vn0, v1, vt1, vn1, v2, vt2, vn2);

@@ -57,7 +57,7 @@ let scale = 0.0;
         );
     });
 
-    image.set_object_scale(objHandler1, 0.5);
+    image.set_object_scale(objHandler1, 0.001);
 
     // fps stuff
     let lastLoop = new Date();

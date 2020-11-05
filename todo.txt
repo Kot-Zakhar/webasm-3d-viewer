@@ -1,0 +1,8 @@
+questions to ask:
+
+How and where should i round the coordinates when rendering?
+
+should the second part of rasterizing-algo contain the right bound?
+
+should i calculate z of the point before rasterizing?
+

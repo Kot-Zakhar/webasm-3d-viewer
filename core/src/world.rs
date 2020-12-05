@@ -4,16 +4,24 @@ use crate::console::log;
 
 pub struct World {
     pub objects: Vec<Object>,
-    pub objects_norms_and_light_angles_cos: Vec<Vec<f64>>,
-    pub direct_light_direction: Vector4<f64>
+    pub direct_light_direction: Vector4<f64>,
+    pub direct_light_color: Color<f64>,
+    pub background_light_color: Color<f64>,
+    // pub ambient_coeff: f64,
+    // pub diffuse_coeff: f64,
+    // pub specular_coeff: f64
 }
 
 impl World {
     pub fn new() -> World {
         World {
             objects: Vec::new(),
-            objects_norms_and_light_angles_cos: Vec::new(),
-            direct_light_direction: Vector4::new(-1., -1., -1., 0.).normalize()
+            direct_light_direction: Vector4::new(-1., -1., -1., 0.).normalize(),
+            direct_light_color: Color{ r: 1., g: 1., b: 1.},
+            background_light_color: Color{ r: 1., g: 1., b: 1.},
+            // ambient_coeff: 0.1,
+            // diffuse_coeff: 0.5,
+            // specular_coeff: 1.
         }
     }
 
@@ -27,6 +35,25 @@ impl World {
             vertices_normals: Vec::new(),
             vertices_viewvable: Vec::new(),
             faces: Vec::new(),
+            model_color: Color{ r: 1., g: 1., b: 1. },
+
+            // emerald
+            ambient: Color{ r: 0.0215, g: 0.1745, b: 0.0215 },
+            diffuse: Color{ r: 0.07568, g: 0.61424, b: 0.07568 },
+            specular: Color{ r: 0.633, g: 0.727811, b: 0.633 },
+            shininess: 0.6,
+
+            // obsidian
+            // ambient: Color{ r: 0.05375, g: 0.05, b: 0.06625 },
+            // diffuse: Color{ r: 0.18275, g: 0.17, b: 0.22525 },
+            // specular: Color{ r: 0.332741, g: 0.328634, b: 0.346435 },
+            // shininess: 0.3,
+
+            // Gold
+            // ambient: Color{ r: 0.24725, g: 0.2245, b: 0.0645 },
+            // diffuse: Color{ r: 0.34615, g: 0.3143, b: 0.0903 },
+            // specular: Color{ r: 0.797357, g: 0.723991, b: 0.208006 },
+            // shininess: 83.2,
 
             rotation_matrix: _one(),
             scale_matrix: _one(),
@@ -34,7 +61,6 @@ impl World {
         };
 
         self.objects.push(obj);
-        self.objects_norms_and_light_angles_cos.push(Vec::new());
         (self.objects.len() - 1) as u32
     }
 
@@ -53,17 +79,13 @@ impl World {
     pub fn add_object_face(&mut self, object_handle: usize, v0: usize, vt0: usize, vn0: usize, v1: usize, vt1: usize, vn1: usize, v2: usize, vt2: usize, vn2: usize) {
         if !self.is_handle_exist(object_handle) { return }
 
-        let i = self.objects[object_handle as usize].add_face(v0, vt0, vn0, v1, vt1, vn1, v2, vt2, vn2);
-        let cos = self.objects[object_handle as usize].faces[i].normal.dot(&(-self.direct_light_direction));
-        self.objects_norms_and_light_angles_cos[object_handle as usize].push(cos);
+        self.objects[object_handle as usize].add_face(v0, vt0, vn0, v1, vt1, vn1, v2, vt2, vn2);
     }
 
     pub fn set_object_rotation(&mut self, object_handle: usize, angle_x: f64, angle_y: f64, angle_z: f64) {
         if !self.is_handle_exist(object_handle) { return }
 
         self.objects[object_handle].set_rotation(angle_x, angle_y, angle_z);
-
-        self.update_object_normals(object_handle);
     }
 
     pub fn set_object_scale(&mut self, object_handle: usize, scale: f64) {
@@ -78,24 +100,9 @@ impl World {
         self.objects[object_handle as usize].set_translaiton(x, y, z);
     }
 
-    fn update_object_normals(&mut self, object_handle: usize) {
-        let obj = &mut self.objects[object_handle];
-        for (face_index, face) in obj.faces.iter_mut().enumerate() {
-            let rotated_normal = obj.rotation_matrix * face.normal;
-            let cos = rotated_normal.dot(&(-self.direct_light_direction));
-            self.objects_norms_and_light_angles_cos[object_handle][face_index] = cos;
-        }
-    }
+    pub fn set_object_color(&mut self, object_handle: usize, r: u8, g: u8, b: u8) {
+        if !self.is_handle_exist(object_handle) { return }
 
-    fn update_objects_normals(&mut self) {
-        for i in 0..self.objects.len() {
-            self.update_object_normals(i);
-        }
+        self.objects[object_handle as usize].set_color(r, g, b);
     }
-
-    pub fn set_directional_light_direction(&mut self, light_direction: Vector3<f64>) {
-        self.direct_light_direction = light_direction.to_homogeneous();
-        self.update_objects_normals();
-    }
-
 }

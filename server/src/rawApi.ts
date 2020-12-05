@@ -5,8 +5,12 @@ import fs from 'fs';
 const rawApi = express.Router();
 
 rawApi.get('/model', (req, res) => {
+    let modelName = req.query["model-name"];
+    console.log(modelName);
+    modelName == modelName || "Model";
+
     let model: any = {};
-    const rawLines = fs.readFileSync('public/Model.obj').toString()
+    const rawLines = fs.readFileSync(`public/${modelName}.obj`).toString()
         .split('\n')
         .map(line => line.split(' '));
 

@@ -1,17 +1,17 @@
 use crate::types::*;
 
-pub struct Face {
-    pub vertices_indexes: Vector3<usize>,
-    pub texture_vertices_indexes: Vector3<usize>,
-    pub vertices_normals_indexes: Vector3<usize>,
-    pub normal: Vector4<f64>
-}
 
 pub struct Object {
     pub vertices: Vec<Vertex>,
     pub vertices_normals: Vec<Vector4<f64>>,
     pub vertices_viewvable: Vec<bool>,
     pub faces: Vec<Face>,
+    pub model_color: Color<f64>,
+
+    pub ambient: Color<f64>,
+    pub diffuse: Color<f64>,
+    pub specular: Color<f64>,
+    pub shininess: f64,
     
     // world_position stuff
     pub rotation_matrix: Matrix4<f64>,
@@ -95,4 +95,27 @@ impl Object {
         )
     }
 
+    pub fn set_color(&mut self, r: u8, g: u8, b: u8) {
+        self.model_color.r = r as f64 / 255.;
+        self.model_color.g = g as f64 / 255.;
+        self.model_color.b = b as f64 / 255.;
+    }
+
+    pub fn set_ambient(&mut self, r: f64, g: f64, b: f64) {
+        self.ambient.r = r;
+        self.ambient.g = g;
+        self.ambient.b = b;
+    }
+
+    pub fn set_diffuse(&mut self, r: f64, g: f64, b: f64) {
+        self.diffuse.r = r;
+        self.diffuse.g = g;
+        self.diffuse.b = b;
+    }
+
+    pub fn set_specular(&mut self, r: f64, g: f64, b: f64) {
+        self.specular.r = r;
+        self.specular.g = g;
+        self.specular.b = b;
+    }
 }

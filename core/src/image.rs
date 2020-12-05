@@ -28,9 +28,11 @@ impl Image {
         let pixels = (0..width * height)
             .map(|_| {
                 Pixel {
-                    r: 255,
-                    g: 255,
-                    b: 255,
+                    color: Color {
+                        r: 255,
+                        g: 255,
+                        b: 255,           
+                    },
                     a: 255
                 }
             })
@@ -107,6 +109,10 @@ impl Image {
     pub fn set_object_translaiton(&mut self, object_handle: usize, x: f64, y: f64, z:f64) {
         self.world.set_object_translaiton(object_handle, x, y, z);
     }
+    
+    pub fn set_object_color(&mut self, object_handle: usize, r: u8, g: u8, b: u8) {
+        self.world.set_object_color(object_handle, r, g, b);
+    }
 
     pub fn set_camera_param(&mut self, param_id: u32, param_value: f64) {
         self.camera.set_param(param_id, param_value);
@@ -118,9 +124,9 @@ impl Image {
 
     fn clear_image(&mut self) {
         // for pixel in self.pixels.iter_mut() {
-        //     pixel.r = 255;
-        //     pixel.g = 255;
-        //     pixel.b = 255;
+        //     pixel.color.r = 0;
+        //     pixel.color.g = 0;
+        //     pixel.color.b = 0;
         //     pixel.a = 255;
         // }
 
@@ -163,14 +169,16 @@ impl Image {
         let view_box_1 = to_screen * Vertex::new(-1., 1., 0., 1.);
         let view_box_2 = to_screen * Vertex::new(1., -1., 1., 1.);
 
-        // let translated_to_object_direct_light_direction = object_independent_matrix * self.world.direct_light_direction;
+        let mut world_to_object_translations = Vec::new();
+        let mut cameras_in_object_space = Vec::new();
+        let mut lights_in_object_space = Vec::new();
 
         // translating all the vertices into the final space (camera space)
-        let view_vertices: Vec<Vec<Vertex>> = self.world.objects.iter_mut().enumerate().map(|(object_index, obj)| {
+        let view_vertices: Vec<Vec<Vertex>> = self.world.objects.iter_mut().map(|obj|{
             let to_world = obj.translation_matrix * obj.scale_matrix * obj.rotation_matrix;
-            let final_matrix = object_independent_matrix * to_world;
+            world_to_object_translations.push(to_world.try_inverse().unwrap());
 
-            // let translated_to_object_direct_light_direction = obj.rotation_matrix.transpose() * self.world.direct_light_direction;
+            let final_matrix = object_independent_matrix * to_world;
 
             let view_vertices: Vec<Vertex> = obj.vertices.iter().map(|vertex| {
                 let mut v = final_matrix * *vertex;
@@ -185,16 +193,12 @@ impl Image {
             view_vertices
         }).collect();
 
-        let color = Pixel{r:255, g:255, b:255, a:255};
-        // let line_color = Pixel{r:50, g:50, b:255, a:255};
 
-        let mut translated_to_objects_direct_light_directions = Vec::new();
         // pre-run (not calculating the light and colors)
         for (object_index, obj) in self.world.objects.iter_mut().enumerate() {
 
-            let translated_to_object_direct_light_direction = obj.rotation_matrix.transpose() * self.world.direct_light_direction;
-            translated_to_objects_direct_light_directions.push(translated_to_object_direct_light_direction);
-
+            cameras_in_object_space.push(world_to_object_translations[object_index] * self.camera.position.to_homogeneous());
+            lights_in_object_space.push(world_to_object_translations[object_index] * self.world.direct_light_direction);
             for (face_index, face) in obj.faces.iter().enumerate() {
                 let i0 = face.vertices_indexes[0] as usize;
                 let i1 = face.vertices_indexes[1] as usize;
@@ -231,9 +235,7 @@ impl Image {
 
                 if self.z_buf[pixel_index] == 1. {
                     self.pixels[pixel_index] = Pixel {
-                        r: 255,
-                        g: 255,
-                        b: 255,
+                        color: white_color,
                         a: 255
                     };
                     continue;
@@ -244,73 +246,61 @@ impl Image {
     
                 let face = &self.world.objects[object_index].faces[face_index];
 
-                let v1 = &view_vertices[object_index][face.vertices_indexes[0]];
-                let v2 = &view_vertices[object_index][face.vertices_indexes[1]];
-                let v3 = &view_vertices[object_index][face.vertices_indexes[2]];
+                let view_v1 = &view_vertices[object_index][face.vertices_indexes[0]];
+                let view_v2 = &view_vertices[object_index][face.vertices_indexes[1]];
+                let view_v3 = &view_vertices[object_index][face.vertices_indexes[2]];
 
-                let vn1 = &self.world.objects[object_index].vertices_normals[face.vertices_normals_indexes[0]];
-                let vn2 = &self.world.objects[object_index].vertices_normals[face.vertices_normals_indexes[1]];
-                let vn3 = &self.world.objects[object_index].vertices_normals[face.vertices_normals_indexes[2]];
+                let model_v1 = &self.world.objects[object_index].vertices[face.vertices_indexes[0]];
+                let model_v2 = &self.world.objects[object_index].vertices[face.vertices_indexes[1]];
+                let model_v3 = &self.world.objects[object_index].vertices[face.vertices_indexes[2]];
 
-                let direct_light_direction = &translated_to_objects_direct_light_directions[object_index];
+                let vn1 = &(self.world.objects[object_index].vertices_normals[face.vertices_normals_indexes[0]]);
+                let vn2 = &(self.world.objects[object_index].vertices_normals[face.vertices_normals_indexes[1]]);
+                let vn3 = &(self.world.objects[object_index].vertices_normals[face.vertices_normals_indexes[2]]);
 
-                let point = Vertex::new(x as f64, y as f64, self.z_buf[pixel_index], 1.);
+                let direct_light_direction = &lights_in_object_space[object_index];
+                let camera_position = &cameras_in_object_space[object_index];
 
-                self.pixels[pixel_index] = raster::find_color_in_point(&point, v1, v2, v3, vn1, vn2, vn3, direct_light_direction, &color);
+                let view_point = Vertex::new(x as f64, y as f64, self.z_buf[pixel_index], 1.);
+
+                let barycentric = raster::calc_barycentric(&view_point, view_v1, view_v2, view_v3);
+                let normal = vn1 * barycentric.x + vn2 * barycentric.y + vn3 * barycentric.z;
+                let cos = normal.normalize().dot(&(-direct_light_direction.normalize()));
+
+                let model_point = model_v1 * barycentric.x + model_v2 * barycentric.y + model_v3 * barycentric.z;
+
+                let model_camera_direction = camera_position - model_point;
+
+                let reflection_direction = direct_light_direction - 2. * (direct_light_direction).dot(&normal) * normal;
+
+                let mut gloss = reflection_direction.normalize().dot(&model_camera_direction.normalize());
+                if gloss < 0. {
+                    gloss = 0.;
+                }
+                
+                let obj = &self.world.objects[object_index];
+                let bg_color = &self.world.background_light_color;
+                let dl_color = &self.world.direct_light_color;
+
+                let gloss_powered = gloss.powf(obj.shininess * 128.);
+                
+                self.pixels[pixel_index].color.r = ((
+                    bg_color.r * obj.ambient.r +
+                    obj.model_color.r * cos * obj.diffuse.r +
+                    dl_color.r * obj.specular.r * gloss_powered
+                ) * 255.) as u8;
+                self.pixels[pixel_index].color.g = ((
+                    bg_color.g * obj.ambient.g +
+                    obj.model_color.g * cos * obj.diffuse.g +
+                    dl_color.g * obj.specular.g * gloss_powered
+                ) * 255.) as u8;
+                self.pixels[pixel_index].color.b = ((
+                    bg_color.b * obj.ambient.b +
+                    obj.model_color.b * cos * obj.diffuse.b +
+                    dl_color.b * obj.specular.b * gloss_powered
+                ) * 255.) as u8;
+
             }
         }
-
-        // for (object_index, obj) in self.world.objects.iter_mut().enumerate() {
-            
-        //     for (face_index, face) in obj.faces.iter().enumerate() {
-        //         let i0 = face.vertices_indexes[0] as usize;
-        //         let i1 = face.vertices_indexes[1] as usize;
-        //         let i2 = face.vertices_indexes[2] as usize;
-
-        //         // face is completely out of the screen
-        //         if !obj.vertices_viewvable[i0] && !obj.vertices_viewvable[i1] && !obj.vertices_viewvable[i2] {
-        //             continue;
-        //         }
-
-        //         // not drawing faces wich are faced away from the viewer
-        //         if !Self::is_faced_towards_viewer(&view_vertices[i0], &view_vertices[i1], &view_vertices[i2]) {
-        //             continue;
-        //         }
-
-        //         let is_partial = !(obj.vertices_viewvable[i0] && obj.vertices_viewvable[i1] && obj.vertices_viewvable[i2]);
-
-
-
-        //         //   Lambert shading (each polygon is colored with a single color)
-        //         let angle = self.world.objects_norms_and_light_angles_cos[object_index][face_index];
-        //         let face_color = Pixel{
-        //             r: (color.r as f64 * angle) as u8,
-        //             g: (color.g as f64 * angle) as u8,
-        //             b: (color.b as f64 * angle) as u8,
-        //             a: color.a
-        //         };
-        //         raster::draw_face(&mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32,
-        //             &view_vertices,
-        //             &face,
-        //             is_partial, &face_color
-        //         );
-
-        //         //   Phong shading ( interpolating normals of vertices to shade the triangle )
-        //         // raster::draw_face_phong(
-        //         //     &mut self.pixels, &mut self.z_buf, self.width as i32, self.height as i32,
-        //         //     &view_vertices, &obj.vertices_normals,
-        //         //     &face,
-        //         //     &translated_to_object_direct_light_direction,
-        //         //     &color,
-        //         //     is_partial
-        //         // );
-
-
-        //         // raster::draw_sides_of_face(&mut self.pixels, &mut self.z_buf, self.width, self.height, 
-        //         //     &view_vertices, &face, is_partial, &line_color);
-        //     }
-    
-        // }
-
     }
 }

@@ -4,14 +4,24 @@ import { memory } from "3d_engine_core/graphics_engine_core_bg";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
-const camera_speed = 0.1;
+const params = new URLSearchParams(window.location.search);
 
-let scale = 0.0;
+const model_name = params.has('model-name') ? params.get('model-name') : "Model";
+
+const camera_speed = params.has('camera-speed') ? params.get('camera-speed') : 0.05;
+
+const rotation_speed = params.has('rotation-speed') ? params.get('rotation-speed') : 0.1;
+
+const model_scale = params.has('model-scale') ? params.get('model-scale') : 0.1;
+
+let model_rotation = params.has('model-rotation') ? params.get('model-rotation') === "true" : false;
+
+// TODO: add color-params to query
 
 (async () => {
     // data fetching
     let model;
-    let modelRes = await fetch("/raw/model");
+    let modelRes = await fetch(`/raw/model?model-name=${model_name}`);
     if (modelRes.ok) {
         model = await modelRes.json();
     } else {
@@ -57,7 +67,7 @@ let scale = 0.0;
         );
     });
 
-    image.set_object_scale(objHandler1, 0.001);
+    image.set_object_scale(objHandler1, model_scale);
 
     // fps stuff
     let lastLoop = new Date();
@@ -82,26 +92,26 @@ let scale = 0.0;
     render();
 
     let angle = 0;
-    let loop = false;
+    let pressedKeys = {};
 
     const rotationLoop = () => {
-        if (loop) {
-            angle += 0.01;
+        if (model_rotation) {
+            angle += rotation_speed;
             image.set_object_rotation(objHandler1, 0, angle, 0);
+        } 
+        if (!Object.values(pressedKeys).every(v => !v) || model_rotation) {
+            image.compute();
+            render();
+            
+            var thisLoop = new Date();
+            var fps = 1000 / (thisLoop - lastLoop);
+            lastLoop = thisLoop;
+            fpsLabel.innerHTML = Math.round(fps);
         }
-        image.compute();
-        render();
         requestAnimationFrame(rotationLoop);
-        
-        var thisLoop = new Date();
-        var fps = 1000 / (thisLoop - lastLoop);
-        lastLoop = thisLoop;
-        fpsLabel.innerHTML = Math.round(fps);
     }
 
     requestAnimationFrame(rotationLoop);
-
-    let pressedKeys = {};
 
     document.addEventListener('keyup', (e) => {
         pressedKeys[e.code] = false;
@@ -137,37 +147,37 @@ let scale = 0.0;
 
         switch (e.code) {
             case "KeyD": // right
-                image.set_camera_param(1, 0.01);
+                image.set_camera_param(1, camera_speed);
                 break;
             case "KeyA": // left
-                image.set_camera_param(1, -0.01);
+                image.set_camera_param(1, -camera_speed);
                 break;
             case "KeyQ": // up
-                image.set_camera_param(2, 0.01);
+                image.set_camera_param(2, camera_speed);
                 break;
             case "KeyE": // down
-                image.set_camera_param(2, -0.01);
+                image.set_camera_param(2, -camera_speed);
                 break;
             case "KeyW": // toward
-                image.set_camera_param(3, 0.01);
+                image.set_camera_param(3, camera_speed);
                 break;
             case "KeyS": // backward
-                image.set_camera_param(3, -0.01);
+                image.set_camera_param(3, -camera_speed);
                 break;
             case "ArrowUp":
-                image.set_camera_param(11, -0.01);
+                image.set_camera_param(11, -camera_speed);
                 break;
             case "ArrowDown":
-                image.set_camera_param(11, 0.01);
+                image.set_camera_param(11, camera_speed);
                 break;
             case "ArrowRight":
-                image.set_camera_param(12, 0.01);
+                image.set_camera_param(12, camera_speed);
                 break;
             case "ArrowLeft":
-                image.set_camera_param(12, -0.01);
+                image.set_camera_param(12, -camera_speed);
                 break;
             case "Space":
-                loop = !loop;
+                model_rotation = !model_rotation;
                 break;
                 
         }

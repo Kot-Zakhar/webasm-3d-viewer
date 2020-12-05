@@ -8,9 +8,7 @@ pub use nalgebra::{
 
 #[derive(Copy, Clone)]
 pub struct Pixel {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
+    pub color: Color<u8>,
     pub a: u8
 }
 
@@ -33,3 +31,29 @@ pub fn _one() -> Matrix4<f64> {
 pub fn _zero() -> Matrix4<f64> {
     _diagonal(0.)
 }
+
+pub struct Face {
+    pub vertices_indexes: Vector3<usize>,
+    pub texture_vertices_indexes: Vector3<usize>,
+    pub vertices_normals_indexes: Vector3<usize>,
+    pub normal: Vector4<f64>
+}
+
+#[derive(Copy, Clone)]
+pub struct Color<T> {
+    pub r: T,
+    pub g: T,
+    pub b: T
+}
+
+pub const white_color: Color<u8> = Color {
+    r: 255,
+    g: 255,
+    b: 255
+};
+
+pub const black_color: Color<u8> = Color {
+    r: 0,
+    g: 0,
+    b: 0
+};

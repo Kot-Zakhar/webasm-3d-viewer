@@ -10,7 +10,7 @@ rawApi.get('/model', (req, res) => {
     modelName == modelName || "Model";
 
     let model: any = {};
-    const rawLines = fs.readFileSync(`public/${modelName}.obj`).toString()
+    const rawLines = fs.readFileSync(`public/source/${modelName}/Model.obj`).toString()
         .split('\n')
         .map(line => line.split(' '));
 

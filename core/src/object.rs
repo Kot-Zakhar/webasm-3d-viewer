@@ -13,10 +13,12 @@ pub struct Object {
     pub normal_texture_normals: Texture<Vector4<f64>>,
     pub specular_texture_data: Texture<Pixel>,
     pub specular_texture_coeff: Texture<Color<f64>>,
+    pub emission_texture: Texture<Pixel>,
     
     pub use_diffuse_texture: bool,
     pub use_normal_texture: bool,
     pub use_specular_texture: bool,
+    pub use_emission_texture: bool,
 
     pub ambient: Color<f64>,
     pub diffuse_intensity: Color<f64>,
@@ -44,16 +46,18 @@ impl Object {
             normal_texture_normals: Texture::new(),
             specular_texture_data: Texture::new(),
             specular_texture_coeff: Texture::new(),
-            
+            emission_texture: Texture::new(),
+
             use_diffuse_texture: false,
             use_normal_texture: false,
             use_specular_texture: false,
+            use_emission_texture: false,
             
             ambient: Color{ r: 0.1, g: 0.1, b: 0.1 },
             diffuse_intensity: Color{ r: 0.8, g: 0.8, b: 0.8 },
             specular: Color{ r: 1., g: 1., b: 1. },
             specular_intensity: Color{ r: 0.1, g: 0.1, b: 0.1 },
-            shininess: 1.,
+            shininess: 32.,
 
             // emerald
             // ambient: Color{ r: 0.0215, g: 0.1745, b: 0.0215 },
@@ -194,6 +198,7 @@ impl Object {
                 self.specular_texture_data.set_size(width, height, Pixel{ color: white_color, a: 0});
                 self.specular_texture_coeff.set_size(width, height, Color{ r: 1., g: 1., b: 1.});
             },
+            4 => self.emission_texture.set_size(width, height, Pixel{color: black_color, a: 0}),
             _ => {}
         }
     }
@@ -203,6 +208,7 @@ impl Object {
             1 => self.diffuse_texture.get_data_pointer(),
             2 => self.normal_texture_data.get_data_pointer(),
             3 => self.specular_texture_data.get_data_pointer(),
+            4 => self.emission_texture.get_data_pointer(),
             _ => std::ptr::null()
         }
     }

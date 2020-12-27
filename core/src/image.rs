@@ -13,6 +13,8 @@ pub struct Image {
     pub height: u32,
     pixels: Vec<Pixel>,
     // buffers
+    emission_buf: Vec<Pixel>,
+    pingpong_emission_buf: Vec<Pixel>,
     z_buf: Vec<f64>,
     face_index_buffer: Vec<i32>,
     object_index_buffer: Vec<i32>,
@@ -21,6 +23,8 @@ pub struct Image {
     camera: Camera,
     to_screen_matrix: Matrix4<f64>
 }
+
+static blur_weights: &'static [f64] = &[0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216];
 
 #[wasm_bindgen]
 impl Image {
@@ -38,6 +42,32 @@ impl Image {
             })
             .collect();
         
+        let emission_buf = (0..width * height)
+        .map(|_| {
+            Pixel {
+                color: Color {
+                    r: 0,
+                    g: 0,
+                    b: 0,           
+                },
+                a: 255
+            }
+        })
+        .collect();
+
+        let pingpong_emission_buf = (0..width * height)
+        .map(|_| {
+            Pixel {
+                color: Color {
+                    r: 0,
+                    g: 0,
+                    b: 0,           
+                },
+                a: 255
+            }
+        })
+        .collect();
+
         let z_buf = vec![1.; (width * height) as usize];
         let face_buffer = vec![-1; (width * height) as usize];
         let object_index_buffer = vec![-1; (width * height) as usize];
@@ -68,6 +98,8 @@ impl Image {
             width,
             height,
             pixels,
+            emission_buf,
+            pingpong_emission_buf,
             z_buf,
             face_index_buffer: face_buffer,
             object_index_buffer,
@@ -83,6 +115,7 @@ impl Image {
 
     pub fn get_pixels(&self) -> *const Pixel {
         self.pixels.as_ptr()
+        // self.emission_buf.as_ptr()
     }
 
     pub fn add_object_vertex(&mut self, object_handle: usize, x:f64, y:f64, z:f64) {
@@ -142,6 +175,12 @@ impl Image {
 
     fn clear_image(&mut self) {
         // for pixel in self.pixels.iter_mut() {
+        //     pixel.color.r = 0;
+        //     pixel.color.g = 0;
+        //     pixel.color.b = 0;
+        //     pixel.a = 255;
+        // }
+        // for pixel in self.emission_buf.iter_mut() {
         //     pixel.color.r = 0;
         //     pixel.color.g = 0;
         //     pixel.color.b = 0;
@@ -249,15 +288,15 @@ impl Image {
             }
         }
 
+        let mut emission_buf_used = false;
+
         for y in 0..self.height {
             for x in 0..self.width {
                 let pixel_index = raster::get_index(y, x, self.width);
 
                 if self.z_buf[pixel_index] == 1. {
-                    self.pixels[pixel_index] = Pixel {
-                        color: white_color,
-                        a: 255
-                    };
+                    self.pixels[pixel_index].color = white_color;
+                    self.emission_buf[pixel_index].color = black_color;
                     continue;
                 }
 
@@ -325,6 +364,13 @@ impl Image {
                     }
                 }
 
+                if obj.use_emission_texture {
+                    self.emission_buf[pixel_index].color = obj.emission_texture.get_pixel(texture_pixel_vertex[0], texture_pixel_vertex[1]).color;
+                    emission_buf_used = true;
+                } else {
+                    self.emission_buf[pixel_index].color = black_color;
+                }
+
                 let normal;
                 if obj.use_normal_texture {
                     normal = *obj.normal_texture_normals.get_pixel(texture_pixel_vertex[0], texture_pixel_vertex[1]);
@@ -380,6 +426,66 @@ impl Image {
                 ) * 255.) as u8;
 
             }
+        }
+
+        if emission_buf_used {
+            // bluring emission buf (gaussian blur)
+            for i in 0..5 {
+                //horizontal
+                for x in 0..self.width {
+                    for y in 0..self.height {
+                        let pixel_index = raster::get_index(y, x, self.width);
+                        let mut pixel_color = self.emission_buf[pixel_index].color.to_f64() * blur_weights[0];
+                        for offset in 1..5 as u32 {
+                            let coeff = blur_weights[offset as usize];
+                            if x as i32 - offset as i32 >= 0 {
+                                let index_l = raster::get_index(y, x - offset, self.width);
+                                pixel_color = pixel_color + (self.emission_buf[index_l].color.to_f64() * coeff);
+                            }
+                            if x as i32 + (offset as i32) < self.width as i32 {
+                                let index_r = raster::get_index(y, x + offset, self.width);
+                                pixel_color = pixel_color + (self.emission_buf[index_r].color.to_f64() * coeff);
+                            }
+                        }
+                        self.pingpong_emission_buf[pixel_index].color = pixel_color.to_u8();
+                    }
+                }
+
+                //vertical
+                for x in 0..self.width {
+                    for y in 0..self.height {
+                        let pixel_index = raster::get_index(y, x, self.width);
+                        let mut pixel_color = self.pingpong_emission_buf[pixel_index].color.to_f64() * blur_weights[0];
+                        for offset in 1..5 as u32 {
+                            let coeff = blur_weights[offset as usize];
+                            if y as i32 - offset as i32 >= 0 {
+                                let index_l = raster::get_index(y - offset, x, self.width);
+                                pixel_color = pixel_color + (self.pingpong_emission_buf[index_l].color.to_f64() * coeff);
+                            }
+                            if y as i32 + (offset as i32) < self.height as i32 {
+                                let index_r = raster::get_index(y + offset, x, self.width);
+                                pixel_color = pixel_color + (self.pingpong_emission_buf[index_r].color.to_f64() * coeff);
+                            }
+                        }
+                        self.emission_buf[pixel_index].color = pixel_color.to_u8();
+                    }
+                }
+            }
+            let gamma = 2.2;
+            let exposure = 1.;
+            // combining emission with image
+            for i in 0..(self.width * self.height) as usize {
+                let pixel_color = self.pixels[i].color.to_f64();
+                let emission_color = self.emission_buf[i].color.to_f64();
+                let color = pixel_color + emission_color * 1.5;
+                let final_color = Color{
+                    r: (1. - ((-color.r / 255.) * exposure).exp()).powf(1./ gamma) * 255.,
+                    g: (1. - ((-color.g / 255.) * exposure).exp()).powf(1./ gamma) * 255.,
+                    b: (1. - ((-color.b / 255.) * exposure).exp()).powf(1./ gamma) * 255.,
+                };
+                self.pixels[i].color = final_color.to_u8();
+            }
+
         }
     }
 }

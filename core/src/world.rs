@@ -102,6 +102,7 @@ impl World {
                 }
             },
             3 => self.objects[object_handle].use_specular_texture = value,
+            4 => self.objects[object_handle].use_emission_texture = value,
             _ => {}
         }
     }

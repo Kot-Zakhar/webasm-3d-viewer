@@ -19,6 +19,7 @@ const model_scale = params.has('model-scale') ? params.get('model-scale') : 0.1;
 const use_normal_map = params.has('normal-map') ? params.get('normal-map') === "true" : true;
 const use_diffuse_map = params.has('diffuse-map') ? params.get('diffuse-map') === "true" : true;
 const use_specular_map = params.has('specular-map') ? params.get('specular-map') === "true" : true;
+const use_emission_map = params.has('emission-map') ? params.get('emission-map') === "true" : true;
 
 
 let model_rotation = params.has('model-rotation') ? params.get('model-rotation') === "true" : false;
@@ -55,6 +56,13 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     } else {
         alert("Cannot fetch specular map");
     }
+
+    let emissionMapRes = await fetch(`/source/${model_name}/Emission map.png`);
+    let emissionMapImage = null;
+    if (emissionMapRes.ok) {
+        emissionMapImage = await ImageJS.load(await emissionMapRes.arrayBuffer())
+    }
+
 
     // core stuff
     const image = Image.new(width, height);
@@ -120,6 +128,18 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     } else {
         image.set_object_use_texture(objHandler1, 3, false);
         console.log('not using specular map');
+    }
+
+    if (use_emission_map && emissionMapImage) {
+        image.set_object_texture_size(objHandler1, 4, emissionMapImage.width, emissionMapImage.height);
+        const emissionTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 4);
+        const emissionTexturePixels = new Uint8ClampedArray(memory.buffer, emissionTexturePixelsPtr, emissionMapImage.width * emissionMapImage.height * 4);
+        emissionTexturePixels.set(emissionMapImage.getRGBAData({clamped: true}));
+        image.set_object_use_texture(objHandler1, 4, true);
+        console.log('using emission map');
+    } else {
+        image.set_object_use_texture(objHandler1, 4, false);
+        console.log('not using emission map');
     }
 
     // fps stuff

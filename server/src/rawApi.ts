@@ -1,17 +1,18 @@
-import { getCiphers } from 'crypto';
 import express from 'express';
 import fs from 'fs';
 
 const rawApi = express.Router();
+const defaultModelName = "Head";
 
 rawApi.get('/model', (req, res) => {
     let modelName = req.query["model-name"];
-    console.log(modelName);
-    modelName == modelName || "Model";
+    console.log("Model: " + modelName);
+    modelName == modelName || defaultModelName;
 
     let model: any = {};
     const rawLines = fs.readFileSync(`public/source/${modelName}/Model.obj`).toString()
         .split('\n')
+        .map(line => line.replace(/\s\s+/g, " "))
         .map(line => line.split(' '));
 
     model.v = rawLines
@@ -20,6 +21,10 @@ rawApi.get('/model', (req, res) => {
 
     model.vn = rawLines
     .filter(line => line[0] === "vn")
+    .map(line => ({ x: parseFloat(line[1]), y: parseFloat(line[2]), z: parseFloat(line[3]) }));
+
+    model.vt = rawLines
+    .filter(line => line[0] === "vt")
     .map(line => ({ x: parseFloat(line[1]), y: parseFloat(line[2]), z: parseFloat(line[3]) }));
 
 

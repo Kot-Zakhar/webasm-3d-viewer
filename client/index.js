@@ -1,4 +1,5 @@
 import { Image } from "3d_engine_core";
+import { Image as ImageJS} from 'image-js';
 import { memory } from "3d_engine_core/graphics_engine_core_bg";
 
 const width = window.innerWidth;
@@ -6,7 +7,7 @@ const height = window.innerHeight;
 
 const params = new URLSearchParams(window.location.search);
 
-const model_name = params.has('model-name') ? params.get('model-name') : "Model";
+const model_name = params.has('model-name') ? params.get('model-name') : "Head";
 
 const camera_speed = params.has('camera-speed') ? params.get('camera-speed') : 0.05;
 
@@ -14,38 +15,50 @@ const rotation_speed = params.has('rotation-speed') ? params.get('rotation-speed
 
 const model_scale = params.has('model-scale') ? params.get('model-scale') : 0.1;
 
-let model_rotation = params.has('model-rotation') ? params.get('model-rotation') === "true" : false;
 
-// TODO: add color-params to query
+const use_normal_map = params.has('normal-map') ? params.get('normal-map') === "true" : true;
+const use_diffuse_map = params.has('diffuse-map') ? params.get('diffuse-map') === "true" : true;
+const use_specular_map = params.has('specular-map') ? params.get('specular-map') === "true" : true;
+
+
+let model_rotation = params.has('model-rotation') ? params.get('model-rotation') === "true" : false;
 
 (async () => {
     // data fetching
-    let model;
     let modelRes = await fetch(`/raw/model?model-name=${model_name}`);
-    if (modelRes.ok) {
-        model = await modelRes.json();
-    } else {
+    if (!modelRes.ok) {
         alert("Cannot fetch model");
         return;
+    }
+    let model = await modelRes.json();
+
+    let diffuseMapRes = await fetch(`/source/${model_name}/Diffuse map.png`);
+    let diffuseMapImage = null;
+    if (diffuseMapRes.ok) {
+        diffuseMapImage = await ImageJS.load(await diffuseMapRes.arrayBuffer())
+    } else {
+        alert("Cannot fetch diffuse map");
+    }
+
+    let normalMapRes = await fetch(`/source/${model_name}/Normal map.png`);
+    let normalMapImage = null;
+    if (normalMapRes.ok) {
+        normalMapImage = await ImageJS.load(await normalMapRes.arrayBuffer())
+    } else {
+        alert("Cannot fetch normal map");
+    }
+
+    let specularMapRes = await fetch(`/source/${model_name}/Specular map.png`);
+    let specularMapImage = null;
+    if (specularMapRes.ok) {
+        specularMapImage = await ImageJS.load(await specularMapRes.arrayBuffer())
+    } else {
+        alert("Cannot fetch specular map");
     }
 
     // core stuff
     const image = Image.new(width, height);
-
-    // gismo
-    // const objHandler0 = image.new_object();
     
-    // image.add_object_vertex(objHandler0, 0, 0, 0, 1);
-    // image.add_object_vertex(objHandler0, 1, 0, 0, 1);
-    // image.add_object_vertex(objHandler0, 0, 1, 0, 1);
-    // image.add_object_vertex(objHandler0, 0, 0, 1, 1);
-
-    // image.add_object_face(objHandler0, 0, 0, 0, 1, 0, 0, 2, 0, 0);
-    // image.add_object_face(objHandler0, 0, 0, 0, 3, 0, 0, 1, 0, 0);
-    // image.add_object_face(objHandler0, 0, 0, 0, 2, 0, 0, 3, 0, 0);
-
-    // image.set_object_scale(objHandler0, 0.5);
-
 
     // objects
     // const objHandler1 = -1;
@@ -57,7 +70,11 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
 
     model.vn.forEach(vn => {
         image.add_object_vertex_normal(objHandler1, vn.x, vn.y, vn.z);
-    })
+    });
+
+    model.vt.forEach(vt => {
+        image.add_object_texture_vertex(objHandler1, vt.x, vt.y, vt.z);
+    });
 
     model.f.forEach(f => {
         image.add_object_face(objHandler1,
@@ -68,6 +85,42 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     });
 
     image.set_object_scale(objHandler1, model_scale);
+
+    if (use_diffuse_map && diffuseMapImage) {
+        image.set_object_texture_size(objHandler1, 1, diffuseMapImage.width, diffuseMapImage.height);
+        const diffuseTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 1);
+        const diffuseTexturePixels = new Uint8ClampedArray(memory.buffer, diffuseTexturePixelsPtr, diffuseMapImage.width * diffuseMapImage.height * 4);
+        diffuseTexturePixels.set(diffuseMapImage.getRGBAData({clamped: true}));
+        image.set_object_use_texture(objHandler1, 1, true);
+        console.log('using diffuse map');
+    } else {
+        image.set_object_use_texture(objHandler1, 1, false);
+        console.log('not using diffuse map');
+    }
+
+    if (use_normal_map && normalMapImage) {
+        image.set_object_texture_size(objHandler1, 2, normalMapImage.width, normalMapImage.height);
+        const normalTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 2);
+        const normalTexturePixels = new Uint8ClampedArray(memory.buffer, normalTexturePixelsPtr, normalMapImage.width * normalMapImage.height * 4);
+        normalTexturePixels.set(normalMapImage.getRGBAData({clamped: true}));
+        image.set_object_use_texture(objHandler1, 2, true);
+        console.log('using normal map');
+    } else {
+        image.set_object_use_texture(objHandler1, 2, false);
+        console.log('not using normal map');
+    }
+
+    if (use_specular_map && specularMapImage) {
+        image.set_object_texture_size(objHandler1, 3, specularMapImage.width, specularMapImage.height);
+        const specularTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 3);
+        const specularTexturePixels = new Uint8ClampedArray(memory.buffer, specularTexturePixelsPtr, specularMapImage.width * specularMapImage.height * 4);
+        specularTexturePixels.set(specularMapImage.getRGBAData({clamped: true}));
+        image.set_object_use_texture(objHandler1, 3, true);
+        console.log('using specular map');
+    } else {
+        image.set_object_use_texture(objHandler1, 3, false);
+        console.log('not using specular map');
+    }
 
     // fps stuff
     let lastLoop = new Date();

@@ -9,3 +9,4 @@ mod camera;
 mod world;
 mod image;
 mod raster;
+mod texture;

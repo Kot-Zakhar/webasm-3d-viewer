@@ -33,6 +33,7 @@
     "copy-webpack-plugin": "^5.0.0"
   },
   "dependencies": {
-    "3d_engine_core": "file:../core/pkg"
+    "3d_engine_core": "file:../core/pkg",
+    "image-js": "^0.31.2"
   }
 }

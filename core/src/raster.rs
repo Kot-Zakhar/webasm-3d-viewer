@@ -230,3 +230,15 @@ pub fn calc_barycentric(
     let v = v31.cross(&v3p).dot(&face_normal) / denom;
     Point3::new(u, v, w)
 }
+
+pub fn lerp(
+    brc: &Point3<f64>,
+    v1: &Vector4<f64>, v2: &Vector4<f64>, v3: &Vector4<f64>,
+    linear_z1: f64, linear_z2: f64, linear_z3: f64
+) -> Vector4<f64> {
+    let v1 = v1 / linear_z1;
+    let v2 = v2 / linear_z2;
+    let v3 = v3 / linear_z3;
+    let interpolated = v1 * brc.x + v2 * brc.y + v3 * brc.z;
+    interpolated / (brc.x / linear_z1 + brc.y / linear_z2 + brc.z / linear_z3)
+}

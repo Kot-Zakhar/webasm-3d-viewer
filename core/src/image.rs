@@ -5,7 +5,6 @@ use crate::raster;
 use crate::world::World;
 use crate::camera::Camera;
 use crate::utils::set_panic_hook;
-use crate::console::log;
 
 #[wasm_bindgen]
 pub struct Image {

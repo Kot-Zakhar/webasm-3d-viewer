@@ -1,7 +1,5 @@
 use std::mem;
 use crate::types::*;
-use crate::object::*;
-use crate::console::log;
 
 pub fn get_index(y: u32, x: u32, width: u32) -> usize {
     (y * width + x) as usize

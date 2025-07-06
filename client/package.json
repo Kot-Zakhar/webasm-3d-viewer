@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "start": "webpack-dev-server --host 0.0.0.0"
+    "start": "webpack serve --open"
   },
   "repository": {
     "type": "git",
@@ -27,13 +27,15 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "devDependencies": {
-    "webpack": "^4.29.3",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5",
-    "copy-webpack-plugin": "^5.0.0"
+    "copy-webpack-plugin": "^5.0.0",
+    "hello-wasm-pack": "^0.1.0",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
     "3d_engine_core": "file:../core/pkg",
-    "image-js": "^0.31.2"
+    "babel-loader": "^10.0.0",
+    "image-js": "^0.37.0"
   }
 }

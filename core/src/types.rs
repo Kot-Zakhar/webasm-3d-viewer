@@ -1,9 +1,6 @@
 pub use nalgebra::{
-    Vector3, Vector4,
-    Matrix3, Matrix4,
-    RowVector3, RowVector4,
-    Point3, Point4,
-    Perspective3
+    Vector3, Vector4, Matrix4,
+    Point3
 };
 
 use std::ops;

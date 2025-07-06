@@ -1,4 +1,3 @@
-use crate::types::*;
 
 pub struct Texture<T> {
     pub width: usize,

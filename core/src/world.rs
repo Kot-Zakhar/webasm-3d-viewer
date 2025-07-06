@@ -1,6 +1,5 @@
 use crate::object::Object;
 use crate::types::*;
-use crate::console::log;
 
 pub struct World {
     pub objects: Vec<Object>,

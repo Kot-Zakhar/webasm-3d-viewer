@@ -1,6 +1,7 @@
-import { Image } from "3d_engine_core";
+import * as wasm from "3d_engine_core";
 import { Image as ImageJS} from 'image-js';
-import { memory } from "3d_engine_core/graphics_engine_core_bg";
+import * as wasm_bg from "3d_engine_core/core_bg.wasm";
+
 
 const width = window.innerWidth;
 const height = window.innerHeight;
@@ -63,9 +64,8 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
         emissionMapImage = await ImageJS.load(await emissionMapRes.arrayBuffer())
     }
 
-
     // core stuff
-    const image = Image.new(width, height);
+    const image = wasm.Image.new(width, height);
     
 
     // objects
@@ -97,7 +97,7 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     if (use_diffuse_map && diffuseMapImage) {
         image.set_object_texture_size(objHandler1, 1, diffuseMapImage.width, diffuseMapImage.height);
         const diffuseTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 1);
-        const diffuseTexturePixels = new Uint8ClampedArray(memory.buffer, diffuseTexturePixelsPtr, diffuseMapImage.width * diffuseMapImage.height * 4);
+        const diffuseTexturePixels = new Uint8ClampedArray(wasm_bg.memory.buffer, diffuseTexturePixelsPtr, diffuseMapImage.width * diffuseMapImage.height * 4);
         diffuseTexturePixels.set(diffuseMapImage.getRGBAData({clamped: true}));
         image.set_object_use_texture(objHandler1, 1, true);
         console.log('using diffuse map');
@@ -109,7 +109,7 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     if (use_normal_map && normalMapImage) {
         image.set_object_texture_size(objHandler1, 2, normalMapImage.width, normalMapImage.height);
         const normalTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 2);
-        const normalTexturePixels = new Uint8ClampedArray(memory.buffer, normalTexturePixelsPtr, normalMapImage.width * normalMapImage.height * 4);
+        const normalTexturePixels = new Uint8ClampedArray(wasm_bg.memory.buffer, normalTexturePixelsPtr, normalMapImage.width * normalMapImage.height * 4);
         normalTexturePixels.set(normalMapImage.getRGBAData({clamped: true}));
         image.set_object_use_texture(objHandler1, 2, true);
         console.log('using normal map');
@@ -121,7 +121,7 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     if (use_specular_map && specularMapImage) {
         image.set_object_texture_size(objHandler1, 3, specularMapImage.width, specularMapImage.height);
         const specularTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 3);
-        const specularTexturePixels = new Uint8ClampedArray(memory.buffer, specularTexturePixelsPtr, specularMapImage.width * specularMapImage.height * 4);
+        const specularTexturePixels = new Uint8ClampedArray(wasm_bg.memory.buffer, specularTexturePixelsPtr, specularMapImage.width * specularMapImage.height * 4);
         specularTexturePixels.set(specularMapImage.getRGBAData({clamped: true}));
         image.set_object_use_texture(objHandler1, 3, true);
         console.log('using specular map');
@@ -133,7 +133,7 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     if (use_emission_map && emissionMapImage) {
         image.set_object_texture_size(objHandler1, 4, emissionMapImage.width, emissionMapImage.height);
         const emissionTexturePixelsPtr = image.get_object_texture_pixels(objHandler1, 4);
-        const emissionTexturePixels = new Uint8ClampedArray(memory.buffer, emissionTexturePixelsPtr, emissionMapImage.width * emissionMapImage.height * 4);
+        const emissionTexturePixels = new Uint8ClampedArray(wasm_bg.memory.buffer, emissionTexturePixelsPtr, emissionMapImage.width * emissionMapImage.height * 4);
         emissionTexturePixels.set(emissionMapImage.getRGBAData({clamped: true}));
         image.set_object_use_texture(objHandler1, 4, true);
         console.log('using emission map');
@@ -147,7 +147,7 @@ let model_rotation = params.has('model-rotation') ? params.get('model-rotation')
     let fpsLabel = document.getElementById("fps-label");
 
     const pixelsPtr = image.get_pixels();
-    const pixels = new Uint8ClampedArray(memory.buffer, pixelsPtr, width * height * 4);
+    const pixels = new Uint8ClampedArray(wasm_bg.memory.buffer, pixelsPtr, width * height * 4);
 
     // drawing on canvas
     const canvas = document.getElementById("viewer-canvas");

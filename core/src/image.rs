@@ -20,7 +20,11 @@ pub struct Image {
 
     world: World,
     camera: Camera,
-    to_screen_matrix: Matrix4<f64>
+    to_screen_matrix: Matrix4<f64>,
+    
+    // WebGPU vertex data cache - properly managed memory
+    vertex_data_cache: Vec<f32>,
+    index_data_cache: Vec<u16>,
 }
 
 static blur_weights: &'static [f64] = &[0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216];
@@ -104,7 +108,9 @@ impl Image {
             object_index_buffer,
             world,
             camera,
-            to_screen_matrix
+            to_screen_matrix,
+            vertex_data_cache: Vec::new(),
+            index_data_cache: Vec::new(),
         }
     }
 
@@ -486,5 +492,132 @@ impl Image {
             }
 
         }
+    }
+
+    // WebGPU-specific methods for exporting vertex data - Memory-safe implementation
+    pub fn update_vertex_data_cache(&mut self, object_handle: usize) {
+        if object_handle >= self.world.objects.len() {
+            self.vertex_data_cache.clear();
+            self.index_data_cache.clear();
+            return;
+        }
+        
+        let obj = &self.world.objects[object_handle];
+        
+        // Clear previous cache
+        self.vertex_data_cache.clear();
+        self.index_data_cache.clear();
+        
+        // Generate vertex data
+        for face in &obj.faces {
+            for i in 0..3 {
+                let vertex_idx = face.vertices_indexes[i] as usize;
+                let normal_idx = face.vertices_normals_indexes[i] as usize;
+                let texture_idx = face.texture_vertices_indexes[i] as usize;
+                
+                if vertex_idx >= obj.vertices.len() || normal_idx >= obj.vertices_normals.len() || texture_idx >= obj.texture_vertices.len() {
+                    continue; // Skip invalid indices
+                }
+                
+                let vertex = &obj.vertices[vertex_idx];
+                let normal = &obj.vertices_normals[normal_idx];
+                let tex_coord = &obj.texture_vertices[texture_idx];
+                
+                // Position (3 floats)
+                self.vertex_data_cache.push(vertex.x as f32);
+                self.vertex_data_cache.push(vertex.y as f32);
+                self.vertex_data_cache.push(vertex.z as f32);
+                
+                // Normal (3 floats)
+                self.vertex_data_cache.push(normal.x as f32);
+                self.vertex_data_cache.push(normal.y as f32);
+                self.vertex_data_cache.push(normal.z as f32);
+                
+                // Texture coordinates (2 floats)
+                self.vertex_data_cache.push(tex_coord.x as f32);
+                self.vertex_data_cache.push(tex_coord.y as f32);
+            }
+        }
+        
+        // Generate index data
+        for i in 0..obj.faces.len() {
+            let base_index = (i * 3) as u16;
+            self.index_data_cache.push(base_index);
+            self.index_data_cache.push(base_index + 1);
+            self.index_data_cache.push(base_index + 2);
+        }
+    }
+    
+    pub fn get_vertex_data(&mut self, object_handle: usize) -> *const f32 {
+        self.update_vertex_data_cache(object_handle);
+        self.vertex_data_cache.as_ptr()
+    }
+    
+    pub fn get_vertex_data_length(&self, object_handle: usize) -> usize {
+        if object_handle >= self.world.objects.len() {
+            return 0;
+        }
+        
+        let obj = &self.world.objects[object_handle];
+        obj.faces.len() * 3 * 8 // 3 vertices per face, 8 floats per vertex (pos + normal + tex)
+    }
+    
+    pub fn get_index_data(&mut self, object_handle: usize) -> *const u16 {
+        // Cache is updated in get_vertex_data, so just return the cached data
+        self.index_data_cache.as_ptr()
+    }
+    
+    pub fn get_index_data_length(&self, object_handle: usize) -> usize {
+        if object_handle >= self.world.objects.len() {
+            return 0;
+        }
+        
+        let obj = &self.world.objects[object_handle];
+        obj.faces.len() * 3 // 3 indices per face
+    }
+    
+    pub fn get_model_matrix(&self, object_handle: usize) -> *const f32 {
+        if object_handle >= self.world.objects.len() {
+            return std::ptr::null();
+        }
+        
+        let obj = &self.world.objects[object_handle];
+        let model_matrix = obj.translation_matrix * obj.scale_matrix * obj.rotation_matrix;
+        
+        let mut matrix_data = Vec::new();
+        for i in 0..16 {
+            matrix_data.push(model_matrix[i] as f32);
+        }
+        
+        let boxed_data = matrix_data.into_boxed_slice();
+        let ptr = boxed_data.as_ptr();
+        std::mem::forget(boxed_data); // Prevent deallocation
+        ptr
+    }
+    
+    pub fn get_view_projection_matrix(&self) -> *const f32 {
+        let projection_matrix = self.camera.projection_matrix;
+        let look_at_matrix = self.camera.look_at_matrix;
+        let view_projection = projection_matrix * look_at_matrix;
+        
+        let mut matrix_data = Vec::new();
+        for i in 0..16 {
+            matrix_data.push(view_projection[i] as f32);
+        }
+        
+        let boxed_data = matrix_data.into_boxed_slice();
+        let ptr = boxed_data.as_ptr();
+        std::mem::forget(boxed_data); // Prevent deallocation
+        ptr
+    }
+    
+    pub fn get_camera_position(&self) -> *const f32 {
+        let camera_pos = self.camera.position;
+        let mut pos_data = vec![camera_pos.x as f32, camera_pos.y as f32, camera_pos.z as f32];
+        
+        let boxed_data = pos_data.into_boxed_slice();
+        let ptr = boxed_data.as_ptr();
+        std::mem::forget(boxed_data); // Prevent deallocation
+        ptr
     }
 }

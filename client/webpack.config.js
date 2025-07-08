@@ -1,6 +1,5 @@
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const path = require('path');
-const { experiments } = require("webpack");
 
 module.exports = {
   entry: "./bootstrap.js",
@@ -10,7 +9,9 @@ module.exports = {
   },
   mode: "development",
   plugins: [
-    new CopyWebpackPlugin(['index.html'])
+    new CopyWebpackPlugin([
+      { from: "index.html", to: "index.html" }
+    ])
   ],
   module: {
     rules: [

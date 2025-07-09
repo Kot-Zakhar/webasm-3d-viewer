@@ -12,7 +12,7 @@ const params = new URLSearchParams(window.location.search);
 
 const model_name = params.has('model-name') ? params.get('model-name') : "Head";
 const camera_speed = params.has('camera-speed') ? params.get('camera-speed') : 0.05;
-const rotation_speed = params.has('rotation-speed') ? params.get('rotation-speed') : 0.1;
+const rotation_speed = params.has('rotation-speed') ? params.get('rotation-speed') : 0.01;
 const model_scale = params.has('model-scale') ? params.get('model-scale') : 0.1;
 
 const use_normal_map = params.has('normal-map') ? params.get('normal-map') === "true" : true;

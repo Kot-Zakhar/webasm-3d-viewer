@@ -6,11 +6,23 @@ A high-performance 3D model viewer built with Rust (WebAssembly) and JavaScript,
 
 ### Spaceship model
 
+Demo of a fallback mode:
+
 ![spaceship-demo](./space-ship.png)
+
+Demo of a WebGPU mode:
+
+![spaceship-demo](./space-ship-webgpu.gif)
 
 ### Car model
 
+Demo of a fallback mode:
+
 ![car-demo](./car-demo.gif)
+
+Demo of a WebGPU mode:
+
+![car-demo-webgpu](./car-demo-webgpu.gif)
 
 ### Iron-man model
 

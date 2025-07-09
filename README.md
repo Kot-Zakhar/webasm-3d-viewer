@@ -10,14 +10,11 @@ A high-performance 3D model viewer built with Rust (WebAssembly) and JavaScript,
 
 ### Car model
 
-![car-demo](./car-demo.png)
-
-![car-demo](./car-demo.webm)
+![car-demo](./car-demo.gif)
 
 ### Iron-man model
 
-![iron-man-demo](./iron-man-demo.webm)
-
+![iron-man-demo](./iron-man-demo.gif)
 
 ## 🚀 Features
 

@@ -7,7 +7,7 @@ const defaultModelName = "Head";
 rawApi.get('/model', (req, res) => {
     let modelName = req.query["model-name"];
     console.log("Model: " + modelName);
-    modelName == modelName || defaultModelName;
+    modelName = modelName || defaultModelName;
 
     let model: any = {};
     const rawLines = fs.readFileSync(`public/source/${modelName}/Model.obj`).toString()

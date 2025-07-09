@@ -28,6 +28,12 @@ Demo of a WebGPU mode:
 
 ![iron-man-demo](./iron-man-demo.gif)
 
+### Diablo model
+
+Demo of a WebGPU mode with emission (eyes and horn):
+
+![diablo-demo](./diablo-emission-demo.png)
+
 ## 🚀 Features
 
 ### 🖥️ Core Rendering
